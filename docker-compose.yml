@@ -17,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - common-network
 
   # Сервис Node.js
   node-app:
@@ -94,3 +96,7 @@ services:
 volumes:
   postgres_data:
   baserow_data:
+
+networks:
+  common-network:
+    driver: bridge
