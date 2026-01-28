@@ -1,0 +1,96 @@
+services:
+  # Сервис PostgreSQL
+  fitbox-postgres:
+    image: postgres:16
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-fitbox}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_strong_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # (опционально) скрипты инициализации
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Сервис Node.js
+  node-app:
+    build: .
+    container_name: node-app
+    ports:
+      - "3010:3000"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: fitbox-postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-fitbox}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-your_strong_password}
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      NODE_ENV: ${NODE_ENV:-development}
+    depends_on:
+      - fitbox-postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  # Сервис Baserow
+  baserow:
+    container_name: baserow
+    image: baserow/baserow:2.0.6
+    env_file:
+      - ./baserow/.env
+    environment:
+      BASEROW_PUBLIC_URL: 'http://localhost'
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - baserow_data:/baserow/data
+    restart: unless-stopped
+    depends_on:
+      fitbox-postgres:
+        condition: service_healthy
+
+  nocodb:
+    container_name: nocodb
+    image: nocodb/nocodb:latest
+    environment:
+      NC_DB: "pg://fitbox-postgres:5432?u=${DB_USER:-postgres}&p=${DB_PASSWORD:-your_strong_password}&d=nocodb"
+    ports:
+      - "8080:8080"
+    depends_on:
+      fitbox-postgres:
+        condition: service_healthy
+
+  # Сервис для выполнения миграций
+  migrate:
+    build: .
+    command: node scripts/migrate.js
+    env_file:
+      - .env
+    environment:
+      DB_HOST: fitbox-postgres
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-fitbox}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-your_strong_password}
+    depends_on:
+      fitbox-postgres:
+        condition: service_healthy
+    restart: "no"
+
+# Объём для данных PostgreSQL
+volumes:
+  postgres_data:
+  baserow_data:

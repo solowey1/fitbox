@@ -1,0 +1,36 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test:db": "node scripts/test-db.js",
+    "migrate": "node scripts/migrate.js",
+    "migrate:schema": "psql -U $DB_USER -d $DB_NAME -f migrations/001_initial_schema.sql",
+    "migrate:seed": "psql -U $DB_USER -d $DB_NAME -f migrations/002_seed_data.sql"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solowey1/fitbox.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/solowey1/fitbox/issues"
+  },
+  "homepage": "https://github.com/solowey1/fitbox#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "ioredis": "^5.9.2",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
