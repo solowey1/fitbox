@@ -45,22 +45,24 @@ services:
       retries: 3
   
   # Сервис Baserow
-  baserow:
-    container_name: baserow
-    image: baserow/baserow:2.0.6
-    env_file:
-      - ./baserow/.env
-    environment:
-      BASEROW_PUBLIC_URL: 'http://localhost'
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - baserow_data:/baserow/data
-    restart: unless-stopped
-    depends_on:
-      fitbox-postgres:
-        condition: service_healthy
+  # baserow:
+  #   container_name: baserow
+  #   image: baserow/baserow:2.0.6
+  #   env_file:
+  #     - ./baserow/.env
+  #   environment:
+  #     BASEROW_PUBLIC_URL: 'http://localhost'
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - baserow_data:/baserow/data
+  #   restart: unless-stopped
+  #   depends_on:
+  #     fitbox-postgres:
+  #       condition: service_healthy
+
+  
 
   nocodb:
     container_name: nocodb
