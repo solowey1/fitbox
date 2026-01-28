@@ -72,31 +72,38 @@ const getTildaMenu = async (req, res) => {
         np.created_at,
         np.updated_at,
         COALESCE(
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'id', c.id,
-              'title', c.title,
-              'startedAt', c.started_at
-            )
-          ) FILTER (WHERE c.id IS NOT NULL),
+          (
+            SELECT json_agg(DISTINCT city_obj)
+            FROM (
+              SELECT jsonb_build_object(
+                'id', c.id,
+                'title', c.title,
+                'startedAt', c.started_at
+              ) as city_obj
+              FROM city_nutrition_programs cnp2
+              JOIN cities c ON cnp2.city_id = c.id
+              WHERE cnp2.nutrition_program_id = np.id
+            ) cities_subquery
+          ),
           '[]'
         ) as cities,
         COALESCE(
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'id', p.id,
-              'days', p.days,
-              'price', p.price,
-              'oldPrice', p.old_price
-            ) ORDER BY p.days ASC
-          ) FILTER (WHERE p.id IS NOT NULL),
+          (
+            SELECT json_agg(price_obj ORDER BY (price_obj->>'days')::int)
+            FROM (
+              SELECT jsonb_build_object(
+                'id', p.id,
+                'days', p.days,
+                'price', p.price,
+                'oldPrice', p.old_price
+              ) as price_obj
+              FROM prices p
+              WHERE p.nutrition_program_id = np.id
+            ) prices_subquery
+          ),
           '[]'
         ) as prices
       FROM nutrition_programs np
-      LEFT JOIN city_nutrition_programs cnp ON np.id = cnp.nutrition_program_id
-      LEFT JOIN cities c ON cnp.city_id = c.id
-      LEFT JOIN prices p ON np.id = p.nutrition_program_id
-      GROUP BY np.id, np.title, np.emoji, np.data, np.sort, np.created_at, np.updated_at
       ORDER BY np.sort ASC
     `);
 
