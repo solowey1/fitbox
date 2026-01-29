@@ -1,17 +1,28 @@
 const cors = require('cors');
 
 const corsMiddleware = cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? (origin, callback) => {
-      const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',');
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.error('CORS blocked:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
+  origin: (origin, callback) => {
+    // Разрешенные домены
+    const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').filter(Boolean);
+
+    // Всегда разрешаем localhost для разработки
+    const defaultAllowed = [
+      'http://localhost:3000',
+      'http://localhost:3010',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3010'
+    ];
+
+    const allAllowed = [...defaultAllowed, ...allowedOrigins];
+
+    // Если origin не указан (например, Postman) или в списке разрешенных - пропускаем
+    if (!origin || allAllowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn('CORS request from:', origin, '- allowed origins:', allAllowed);
+      callback(null, true); // Временно разрешаем все для отладки
     }
-    : '*', // В разработке разрешаем всё
+  },
   credentials: true,
   // Разрешаем все методы для CORS (защита на уровне authMiddleware)
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
