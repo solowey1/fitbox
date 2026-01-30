@@ -221,7 +221,27 @@ const getProgramDishes = async (req, res) => {
         d.images,
         npd.day_of_week,
         npd.week_number,
-        npd.dish_number
+        npd.dish_number,
+        COALESCE(
+          (
+            SELECT string_agg(i.title || ' (' || di.quantity || 'г)', ', ')
+            FROM dish_ingredients di
+            JOIN ingredients i ON di.ingredient_id = i.id
+            WHERE di.dish_id = d.id
+          ),
+          'Нет информации'
+        ) as ingredients_text,
+        COALESCE(
+          (
+            SELECT SUM(
+              (i.calories * di.quantity / 100)::numeric(10,2)
+            )
+            FROM dish_ingredients di
+            JOIN ingredients i ON di.ingredient_id = i.id
+            WHERE di.dish_id = d.id
+          ),
+          0
+        ) as total_calories
       FROM nutrition_program_dishes npd
       JOIN dishes d ON npd.dish_id = d.id
       WHERE npd.nutrition_program_id = $1
@@ -248,7 +268,9 @@ const getProgramDishes = async (req, res) => {
           : null,
         dayOfWeek: row.day_of_week,
         weekNumber: row.week_number,
-        dishNumber: row.dish_number
+        dishNumber: row.dish_number,
+        ingredientsText: row.ingredients_text || 'Нет информации',
+        calories: row.total_calories ? Math.round(parseFloat(row.total_calories)) : 0
       };
     });
 

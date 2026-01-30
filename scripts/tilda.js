@@ -213,8 +213,8 @@ const getProgramWithPrices = async (programId) => {
 
 const getDishes = async (programId) => {
   try {
-    const dishes = await apiFetch(`/dishes?nutrition_program_id=${programId}`);
-    return dishes;
+    const response = await apiFetch(`/tilda/menu/${programId}/dishes`);
+    return response.dishes || [];
   } catch (error) {
     console.error(`Ошибка при получении блюд для программы ${programId}:`, error);
     return [];
@@ -311,20 +311,19 @@ const transformPrices = (prices) => {
 
 const transformDishesData = (dishes) => {
   return dishes.map(dish => {
-    // Получаем URL первого изображения, если есть
-    const imageUrl = dish.images && dish.images.length > 0
-      ? `${API_BASE_URL.replace('/api', '')}/${dish.images[0].path}`
-      : '';
+    // API возвращает уже готовый URL изображения или null
+    const imageUrl = dish.image || '';
+    const caloriesText = dish.calories ? `${dish.calories} ккал` : '';
 
     return {
       'id': dish.id,
       'image': imageUrl,
       'name': dish.title || '',
-      'ingredients': dish.ingredients_text || 'Нет информации',
-      'calories': dish.calories || '',
-      'week': dish.week || 1,
-      'day': dish.day || 1,
-      'number': dish.meal_number || 1,
+      'ingredients': dish.ingredientsText || 'Нет информации',
+      'calories': caloriesText,
+      'week': dish.weekNumber || 1,
+      'day': dish.dayOfWeek || 1,
+      'number': dish.dishNumber || 1,
     };
   });
 }
