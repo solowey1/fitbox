@@ -231,6 +231,16 @@ const getProgramDishes = async (req, res) => {
           ),
           'Нет информации'
         ) as ingredients_text,
+        -- Общий вес блюда (сумма всех ингредиентов)
+        COALESCE(
+          (
+            SELECT SUM(di.quantity)
+            FROM dish_ingredients di
+            WHERE di.dish_id = d.id
+          ),
+          0
+        ) as total_weight,
+        -- Общая калорийность блюда
         COALESCE(
           (
             SELECT SUM(
@@ -241,7 +251,43 @@ const getProgramDishes = async (req, res) => {
             WHERE di.dish_id = d.id
           ),
           0
-        ) as total_calories
+        ) as total_calories,
+        -- Общие белки блюда
+        COALESCE(
+          (
+            SELECT SUM(
+              (i.proteins * di.quantity / 100)::numeric(10,2)
+            )
+            FROM dish_ingredients di
+            JOIN ingredients i ON di.ingredient_id = i.id
+            WHERE di.dish_id = d.id
+          ),
+          0
+        ) as total_proteins,
+        -- Общие жиры блюда
+        COALESCE(
+          (
+            SELECT SUM(
+              (i.fats * di.quantity / 100)::numeric(10,2)
+            )
+            FROM dish_ingredients di
+            JOIN ingredients i ON di.ingredient_id = i.id
+            WHERE di.dish_id = d.id
+          ),
+          0
+        ) as total_fats,
+        -- Общие углеводы блюда
+        COALESCE(
+          (
+            SELECT SUM(
+              (i.carbohydrates * di.quantity / 100)::numeric(10,2)
+            )
+            FROM dish_ingredients di
+            JOIN ingredients i ON di.ingredient_id = i.id
+            WHERE di.dish_id = d.id
+          ),
+          0
+        ) as total_carbohydrates
       FROM nutrition_program_dishes npd
       JOIN dishes d ON npd.dish_id = d.id
       WHERE npd.nutrition_program_id = $1
@@ -264,6 +310,7 @@ const getProgramDishes = async (req, res) => {
         id: result.rows[0].id,
         title: result.rows[0].title,
         ingredients_text: result.rows[0].ingredients_text,
+        total_weight: result.rows[0].total_weight,
         total_calories: result.rows[0].total_calories,
         day_of_week: result.rows[0].day_of_week,
         week_number: result.rows[0].week_number
@@ -272,13 +319,32 @@ const getProgramDishes = async (req, res) => {
 
     // Группируем блюда по дням и неделям
     const dishes = result.rows.map((row, index) => {
+      const totalWeight = parseFloat(row.total_weight) || 0;
+
+      // Пересчитываем КБЖУ на 100г
+      const caloriesPer100g = totalWeight > 0
+        ? Math.round((parseFloat(row.total_calories) / totalWeight) * 100)
+        : 0;
+      const proteinsPer100g = totalWeight > 0
+        ? Math.round((parseFloat(row.total_proteins) / totalWeight) * 100)
+        : 0;
+      const fatsPer100g = totalWeight > 0
+        ? Math.round((parseFloat(row.total_fats) / totalWeight) * 100)
+        : 0;
+      const carbohydratesPer100g = totalWeight > 0
+        ? Math.round((parseFloat(row.total_carbohydrates) / totalWeight) * 100)
+        : 0;
+
       // Логируем каждую строку для отладки (только первые 3)
       if (index < 3) {
         console.log('Маппинг строки:', {
-          raw_ingredients: row.ingredients_text,
+          title: row.title,
+          total_weight: totalWeight,
           raw_calories: row.total_calories,
-          mapped_ingredients: row.ingredients_text || 'Нет информации',
-          mapped_calories: row.total_calories ? Math.round(parseFloat(row.total_calories)) : 0
+          calories_per_100g: caloriesPer100g,
+          proteins_per_100g: proteinsPer100g,
+          fats_per_100g: fatsPer100g,
+          carbs_per_100g: carbohydratesPer100g
         });
       }
 
@@ -292,7 +358,13 @@ const getProgramDishes = async (req, res) => {
         weekNumber: row.week_number,
         dishNumber: row.dish_number,
         ingredientsText: row.ingredients_text || 'Нет информации',
-        calories: row.total_calories ? Math.round(parseFloat(row.total_calories)) : 0
+        totalWeight: Math.round(totalWeight),
+        nutrition: {
+          calories: caloriesPer100g,
+          proteins: proteinsPer100g,
+          fats: fatsPer100g,
+          carbohydrates: carbohydratesPer100g
+        }
       };
     });
 

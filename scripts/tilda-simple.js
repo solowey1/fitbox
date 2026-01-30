@@ -15,6 +15,7 @@ const blockTarget = document.getElementById('target');
 // Глобальные переменные
 window.menuData = null;
 window.currentProgram = null;
+window.selectedDays = null; // Сохраняем выбранное количество дней
 let swiperProgramm = null;
 
 // ====================
@@ -361,6 +362,16 @@ const renderDaysButtons = (program) => {
   // Очищаем существующие кнопки
   daysForm.innerHTML = '';
 
+  // Пытаемся найти сохраненный выбор в текущей программе
+  let selectedPrice = null;
+  if (window.selectedDays) {
+    selectedPrice = program.prices.find(p => p.days === window.selectedDays);
+  }
+  // Если не нашли или не было выбора, берем первый
+  if (!selectedPrice && program.prices.length > 0) {
+    selectedPrice = program.prices[0];
+  }
+
   program.prices.forEach((price, index) => {
     const input = document.createElement('input');
     input.type = 'radio';
@@ -378,25 +389,23 @@ const renderDaysButtons = (program) => {
 
     // Обработчик клика
     label.addEventListener('click', () => {
+      // Сохраняем выбранное количество дней
+      window.selectedDays = price.days;
       updatePriceSummary(price);
       document.querySelectorAll('.menu-button.days').forEach(btn => btn.classList.remove('active'));
       label.classList.add('active');
     });
 
     daysForm.appendChild(label);
-  });
 
-  // Выбираем первую цену по умолчанию
-  if (program.prices.length > 0) {
-    const firstLabel = daysForm.querySelector('label');
-    const firstInput = daysForm.querySelector('input');
-    if (firstLabel && firstInput) {
-      // Программно выбираем первую опцию без триггера события клика
-      firstInput.checked = true;
-      firstLabel.classList.add('active');
-      updatePriceSummary(program.prices[0]);
+    // Выбираем сохраненную или первую опцию
+    if (selectedPrice && price.days === selectedPrice.days) {
+      input.checked = true;
+      label.classList.add('active');
+      updatePriceSummary(price);
+      window.selectedDays = price.days;
     }
-  }
+  });
 };
 
 /**
@@ -501,19 +510,24 @@ const renderWeekSelect = () => {
   const select = document.querySelector('select[name="week"]');
   if (!select) return;
 
+  // Включаем селект, если он был disabled
+  select.disabled = false;
+
   select.innerHTML = '';
+
+  // Определяем текущую неделю
+  const currentWeek = window.menuData && window.menuData.currentCity
+    ? getCurrentWeekInCycle(window.menuData.currentCity.startedAt)
+    : 1;
 
   for (let i = 1; i <= 4; i++) {
     const option = document.createElement('option');
     option.value = i;
     option.textContent = `${i} неделя`;
+    if (i === currentWeek) {
+      option.selected = true;
+    }
     select.appendChild(option);
-  }
-
-  // Устанавливаем текущую неделю
-  if (window.menuData && window.menuData.currentCity) {
-    const currentWeek = getCurrentWeekInCycle(window.menuData.currentCity.startedAt);
-    select.value = currentWeek;
   }
 
   // Удаляем старые обработчики перед добавлением нового
@@ -553,13 +567,17 @@ const renderDishCard = (dish) => {
   ingredients.classList.add('dish-card-ingredients');
   ingredients.textContent = dish.ingredientsText || 'Нет информации';
 
-  const calories = document.createElement('div');
-  calories.classList.add('dish-card-calories');
-  calories.textContent = dish.calories ? `${dish.calories} ккал` : '';
+  const nutrition = document.createElement('div');
+  nutrition.classList.add('dish-card-nutrition');
+
+  if (dish.nutrition && dish.nutrition.calories > 0) {
+    const nutritionText = `на 100 г: ${dish.nutrition.calories} ккал, ${dish.nutrition.proteins}/${dish.nutrition.fats}/${dish.nutrition.carbohydrates} б/ж/у`;
+    nutrition.textContent = nutritionText;
+  }
 
   content.appendChild(name);
   content.appendChild(ingredients);
-  content.appendChild(calories);
+  content.appendChild(nutrition);
 
   card.appendChild(image);
   card.appendChild(content);
