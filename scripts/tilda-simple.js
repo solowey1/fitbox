@@ -6,7 +6,7 @@
 // ====================
 // КОНФИГУРАЦИЯ
 // ====================
-const API_BASE_URL = 'https://pure-tiger-58ce.tunnl.gg/api';
+const API_BASE_URL = 'https://fitbox.necodim.ru/api';
 
 // DOM элементы
 const blockMenu = document.getElementById('menu');
@@ -280,12 +280,18 @@ const renderProgramSlider = (programs) => {
       slidesPerView: 1,
       on: {
         slideChange: function () {
+          // Используем флаг, чтобы избежать циклических вызовов
+          if (this.params.programmaticSlide) {
+            this.params.programmaticSlide = false;
+            return;
+          }
+
           setTimeout(() => {
             const activeSlide = this.slides[this.activeIndex];
             const programId = activeSlide.querySelector('.program-info-wrapper')?.getAttribute('data-program-id');
             if (programId) {
               const program = window.menuData.programs.find(p => p.id === parseInt(programId));
-              if (program) {
+              if (program && window.currentProgram?.id !== program.id) {
                 setActiveProgram(program);
               }
             }
@@ -383,8 +389,12 @@ const renderDaysButtons = (program) => {
   // Выбираем первую цену по умолчанию
   if (program.prices.length > 0) {
     const firstLabel = daysForm.querySelector('label');
-    if (firstLabel) {
-      firstLabel.click();
+    const firstInput = daysForm.querySelector('input');
+    if (firstLabel && firstInput) {
+      // Программно выбираем первую опцию без триггера события клика
+      firstInput.checked = true;
+      firstLabel.classList.add('active');
+      updatePriceSummary(program.prices[0]);
     }
   }
 };
@@ -448,10 +458,16 @@ const setActiveProgram = (program) => {
   // Обновляем summary блок
   updateProgramSummary(program);
 
-  // Переключаем слайдер
+  // Переключаем слайдер (если он уже не на нужном слайде)
   if (swiperProgramm) {
     const index = program.sort - 1;
-    swiperProgramm.slideToLoop(index);
+    const currentRealIndex = swiperProgramm.realIndex;
+
+    if (currentRealIndex !== index) {
+      // Устанавливаем флаг, чтобы slideChange не вызывал setActiveProgram
+      swiperProgramm.params.programmaticSlide = true;
+      swiperProgramm.slideToLoop(index);
+    }
   }
 };
 

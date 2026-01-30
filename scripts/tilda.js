@@ -1,7 +1,7 @@
 // ====================
 // КОНФИГУРАЦИЯ API
 // ====================
-const API_BASE_URL = 'https://jade-oak-9eb2.tunnl.gg/api';
+const API_BASE_URL = 'https://fitbox.necodim.ru/api';
 
 // Стандартные настройки при загрузке страницы (выбранные программа и количество дней)
 const defaultSettings = {

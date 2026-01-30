@@ -220,8 +220,8 @@ const getProgramDishes = async (req, res) => {
         d.title,
         d.images,
         npd.day_of_week,
-        npd.meal_type,
-        npd.sort as meal_sort
+        npd.week_number,
+        npd.dish_number
       FROM nutrition_program_dishes npd
       JOIN dishes d ON npd.dish_id = d.id
       WHERE npd.nutrition_program_id = $1
@@ -234,15 +234,12 @@ const getProgramDishes = async (req, res) => {
       params.push(parseInt(day));
     }
 
-    query += ` ORDER BY npd.day_of_week, npd.meal_type, npd.sort`;
+    query += ` ORDER BY npd.day_of_week, npd.week_number, npd.dish_number`;
 
     const result = await db.query(query, params);
 
     // Группируем блюда по дням и неделям
     const dishes = result.rows.map(row => {
-      // Определяем неделю (циклически повторяем меню каждые 4 недели)
-      const weekNumber = week ? parseInt(week) : null;
-
       return {
         id: row.id,
         title: row.title,
@@ -250,9 +247,8 @@ const getProgramDishes = async (req, res) => {
           ? `${req.protocol}://${req.get('host')}/${row.images[0].path}`
           : null,
         dayOfWeek: row.day_of_week,
-        week: weekNumber || Math.ceil(row.day_of_week / 7),
-        mealType: row.meal_type,
-        sort: row.meal_sort
+        weekNumber: row.week_number,
+        dishNumber: row.dish_number
       };
     });
 

@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS dish_ingredients (
     id SERIAL PRIMARY KEY,
     dish_id INTEGER NOT NULL REFERENCES dishes(id) ON DELETE CASCADE,
     ingredient_id INTEGER NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
-    quantity DECIMAL(10, 2) NOT NULL, -- количество в граммах
+    quantity DECIMAL(10, 2), -- количество в граммах (nullable для совместимости с Budibase)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(dish_id, ingredient_id)
@@ -78,10 +78,10 @@ CREATE TABLE IF NOT EXISTS dish_ingredients (
 CREATE TABLE IF NOT EXISTS nutrition_program_dishes (
     id SERIAL PRIMARY KEY,
     nutrition_program_id INTEGER NOT NULL REFERENCES nutrition_programs(id) ON DELETE CASCADE,
-    day_of_week INTEGER NOT NULL CHECK (day_of_week >= 1 AND day_of_week <= 7), -- 1=Понедельник, 7=Воскресенье
-    meal_type VARCHAR(50) NOT NULL, -- 'breakfast', 'lunch', 'dinner', 'snack'
+    day_of_week INTEGER DEFAULT 1 CHECK (day_of_week >= 1 AND day_of_week <= 7), -- 1=Понедельник, 7=Воскресенье
+    week_number INTEGER DEFAULT 1 CHECK (week_number >= 1 AND week_number <= 5), -- номер недели
+    dish_number INTEGER DEFAULT 1, -- порядок отображения блюд
     dish_id INTEGER NOT NULL REFERENCES dishes(id) ON DELETE CASCADE,
-    sort INTEGER DEFAULT 0, -- порядок отображения блюд
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -105,9 +105,9 @@ CREATE TABLE IF NOT EXISTS order_items (
     id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     nutrition_program_id INTEGER NOT NULL REFERENCES nutrition_programs(id) ON DELETE RESTRICT,
-    price_id INTEGER NOT NULL REFERENCES prices(id) ON DELETE RESTRICT,
+    price_id INTEGER REFERENCES prices(id) ON DELETE RESTRICT, -- nullable для совместимости с Budibase
     quantity INTEGER DEFAULT 1,
-    price DECIMAL(10, 2) NOT NULL, -- цена на момент заказа
+    price DECIMAL(10, 2), -- цена на момент заказа
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
