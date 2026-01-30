@@ -469,6 +469,29 @@ const setActiveProgram = (program) => {
       swiperProgramm.slideToLoop(index);
     }
   }
+
+  // Загружаем блюда для выбранной программы
+  const select = document.querySelector('select[name="week"]');
+  const currentWeek = select ? parseInt(select.value) : null;
+  loadAndRenderDishes(program.id, currentWeek);
+};
+
+/**
+ * Переключить отображаемую неделю
+ */
+const switchWeek = (weekNumber) => {
+  const programWrapper = document.querySelector('.program-wrapper');
+  if (!programWrapper) return;
+
+  // Скрываем все недели
+  const allWeeks = programWrapper.querySelectorAll('.week-wrapper');
+  allWeeks.forEach(week => week.classList.add('hidden'));
+
+  // Показываем выбранную неделю
+  const selectedWeek = programWrapper.querySelector(`.week-wrapper[data-week-number="${weekNumber}"]`);
+  if (selectedWeek) {
+    selectedWeek.classList.remove('hidden');
+  }
 };
 
 /**
@@ -491,6 +514,189 @@ const renderWeekSelect = () => {
   if (window.menuData && window.menuData.currentCity) {
     const currentWeek = getCurrentWeekInCycle(window.menuData.currentCity.startedAt);
     select.value = currentWeek;
+  }
+
+  // Удаляем старые обработчики перед добавлением нового
+  const newSelect = select.cloneNode(true);
+  select.parentNode.replaceChild(newSelect, select);
+
+  // Добавляем обработчик изменения недели
+  newSelect.addEventListener('change', (e) => {
+    const weekNumber = parseInt(e.target.value);
+    switchWeek(weekNumber);
+  });
+};
+
+/**
+ * Отрендерить карточку блюда
+ */
+const renderDishCard = (dish) => {
+  const card = document.createElement('div');
+  card.classList.add('dish-card');
+  card.id = `dish-${dish.id}`;
+
+  const image = document.createElement('div');
+  image.classList.add('dish-card-image');
+  if (dish.image) {
+    image.style.backgroundImage = `url(${dish.image})`;
+  }
+  image.setAttribute('loading', 'lazy');
+
+  const content = document.createElement('div');
+  content.classList.add('dish-card-content');
+
+  const name = document.createElement('h5');
+  name.classList.add('dish-card-name');
+  name.textContent = dish.title;
+
+  const ingredients = document.createElement('div');
+  ingredients.classList.add('dish-card-ingredients');
+  ingredients.textContent = dish.ingredientsText || 'Нет информации';
+
+  const calories = document.createElement('div');
+  calories.classList.add('dish-card-calories');
+  calories.textContent = dish.calories ? `${dish.calories} ккал` : '';
+
+  content.appendChild(name);
+  content.appendChild(ingredients);
+  content.appendChild(calories);
+
+  card.appendChild(image);
+  card.appendChild(content);
+
+  return card;
+};
+
+/**
+ * Получить текст даты для дня
+ */
+const getDayDateText = (startDate, weekNumber, dayNumber) => {
+  const start = new Date(startDate);
+  const dayToAdd = (weekNumber - 1) * 7 + dayNumber - 1;
+
+  const currentDate = new Date(start);
+  currentDate.setDate(start.getDate() + dayToAdd);
+
+  const months = [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+  ];
+
+  const day = currentDate.getDate();
+  const month = months[currentDate.getMonth()];
+  const year = currentDate.getFullYear();
+
+  return `Рацион питания на ${day} ${month} ${year} года`;
+};
+
+/**
+ * Загрузить и отобразить блюда для программы
+ */
+const loadAndRenderDishes = async (programId, weekNumber = null) => {
+  try {
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (!contentWrapper) return;
+
+    // Показываем индикатор загрузки
+    contentWrapper.innerHTML = '<div class="loading">Загрузка блюд...</div>';
+
+    const program = window.menuData.programs.find(p => p.id === programId);
+    if (!program) return;
+
+    // Определяем текущую неделю, если не указана
+    const currentWeek = weekNumber || getCurrentWeekInCycle(program.startedAt || window.menuData.currentCity.startedAt);
+
+    // Загружаем блюда
+    const dishesData = await getProgramDishes(programId);
+
+    console.log('Полученные данные блюд:', dishesData);
+
+    if (!dishesData || !dishesData.dishes || dishesData.dishes.length === 0) {
+      contentWrapper.innerHTML = '<div class="no-dishes">Блюда для этой программы пока не добавлены</div>';
+      return;
+    }
+
+    // Группируем блюда по неделям и дням
+    const dishesByWeek = {};
+    dishesData.dishes.forEach(dish => {
+      console.log('Обработка блюда:', dish.title, {
+        ingredientsText: dish.ingredientsText,
+        calories: dish.calories,
+        weekNumber: dish.weekNumber,
+        dayOfWeek: dish.dayOfWeek
+      });
+      const week = dish.weekNumber || 1;
+      const day = dish.dayOfWeek || 1;
+
+      if (!dishesByWeek[week]) {
+        dishesByWeek[week] = {};
+      }
+      if (!dishesByWeek[week][day]) {
+        dishesByWeek[week][day] = [];
+      }
+      dishesByWeek[week][day].push(dish);
+    });
+
+    // Создаем обертку для программы
+    const programWrapper = document.createElement('div');
+    programWrapper.classList.add('program-wrapper');
+    programWrapper.id = `program-${programId}`;
+
+    // Создаем обертки для недель
+    for (let w = 1; w <= 4; w++) {
+      const weekWrapper = document.createElement('div');
+      weekWrapper.classList.add('week-wrapper');
+      weekWrapper.setAttribute('data-week-number', w);
+
+      // Скрываем неактивные недели
+      if (w !== currentWeek) {
+        weekWrapper.classList.add('hidden');
+      }
+
+      // Создаем дни для каждой недели
+      for (let d = 1; d <= 7; d++) {
+        const dayWrapper = document.createElement('div');
+        dayWrapper.classList.add('day-wrapper');
+        dayWrapper.setAttribute('data-day-number', d);
+
+        const dayTitle = document.createElement('div');
+        dayTitle.classList.add('day-title');
+        dayTitle.textContent = getDayDateText(
+          program.startedAt || window.menuData.currentCity.startedAt,
+          w,
+          d
+        );
+
+        const dishesWrapper = document.createElement('div');
+        dishesWrapper.classList.add('dishes-wrapper');
+
+        // Добавляем блюда для этого дня
+        if (dishesByWeek[w] && dishesByWeek[w][d]) {
+          dishesByWeek[w][d]
+            .sort((a, b) => (a.dishNumber || 0) - (b.dishNumber || 0))
+            .forEach(dish => {
+              const dishCard = renderDishCard(dish);
+              dishesWrapper.appendChild(dishCard);
+            });
+        }
+
+        dayWrapper.appendChild(dayTitle);
+        dayWrapper.appendChild(dishesWrapper);
+        weekWrapper.appendChild(dayWrapper);
+      }
+
+      programWrapper.appendChild(weekWrapper);
+    }
+
+    contentWrapper.innerHTML = '';
+    contentWrapper.appendChild(programWrapper);
+
+  } catch (error) {
+    console.error('Ошибка при загрузке блюд:', error);
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (contentWrapper) {
+      contentWrapper.innerHTML = '<div class="error">Не удалось загрузить блюда</div>';
+    }
   }
 };
 
@@ -522,9 +728,6 @@ const initApp = async () => {
     }
 
     console.log('Приложение инициализировано');
-
-    // TODO: Загрузить блюда для каждой программы при необходимости
-    // const dishesData = await getProgramDishes(program.id, currentWeek);
 
   } catch (error) {
     console.error('Ошибка при инициализации:', error);

@@ -258,8 +258,30 @@ const getProgramDishes = async (req, res) => {
 
     const result = await db.query(query, params);
 
+    // Логируем первую строку для отладки
+    if (result.rows.length > 0) {
+      console.log('Первая строка из БД:', {
+        id: result.rows[0].id,
+        title: result.rows[0].title,
+        ingredients_text: result.rows[0].ingredients_text,
+        total_calories: result.rows[0].total_calories,
+        day_of_week: result.rows[0].day_of_week,
+        week_number: result.rows[0].week_number
+      });
+    }
+
     // Группируем блюда по дням и неделям
-    const dishes = result.rows.map(row => {
+    const dishes = result.rows.map((row, index) => {
+      // Логируем каждую строку для отладки (только первые 3)
+      if (index < 3) {
+        console.log('Маппинг строки:', {
+          raw_ingredients: row.ingredients_text,
+          raw_calories: row.total_calories,
+          mapped_ingredients: row.ingredients_text || 'Нет информации',
+          mapped_calories: row.total_calories ? Math.round(parseFloat(row.total_calories)) : 0
+        });
+      }
+
       return {
         id: row.id,
         title: row.title,
