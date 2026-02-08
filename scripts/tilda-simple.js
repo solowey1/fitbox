@@ -6,7 +6,7 @@
 // ====================
 // КОНФИГУРАЦИЯ
 // ====================
-const API_BASE_URL = 'https://fitbox.necodim.ru/api';
+const API_BASE_URL = 'https://app.fitbox.su/api';
 
 // DOM элементы
 const blockMenu = document.getElementById('menu');
@@ -548,6 +548,7 @@ const renderDishCard = (dish) => {
   const card = document.createElement('div');
   card.classList.add('dish-card');
   card.id = `dish-${dish.id}`;
+  card.style.cursor = 'pointer';
 
   const image = document.createElement('div');
   image.classList.add('dish-card-image');
@@ -563,26 +564,159 @@ const renderDishCard = (dish) => {
   name.classList.add('dish-card-name');
   name.textContent = dish.title;
 
-  const ingredients = document.createElement('div');
-  ingredients.classList.add('dish-card-ingredients');
-  ingredients.textContent = dish.ingredientsText || 'Нет информации';
-
   const nutrition = document.createElement('div');
   nutrition.classList.add('dish-card-nutrition');
 
   if (dish.nutrition && dish.nutrition.calories > 0) {
     const nutritionText = `на 100 г: ${dish.nutrition.calories} ккал, ${dish.nutrition.proteins}/${dish.nutrition.fats}/${dish.nutrition.carbohydrates} б/ж/у`;
     nutrition.textContent = nutritionText;
+  } else {
+    nutrition.textContent = 'Нет данных о питательности';
   }
 
   content.appendChild(name);
-  content.appendChild(ingredients);
   content.appendChild(nutrition);
 
   card.appendChild(image);
   card.appendChild(content);
 
+  // Делаем всю карточку кликабельной
+  card.addEventListener('click', () => {
+    showDishModal(dish);
+  });
+
   return card;
+};
+
+/**
+ * Показать модальное окно с составом блюда
+ */
+const showDishModal = (dish) => {
+  // Проверяем, есть ли уже dialog, если есть - удаляем
+  const existingDialog = document.querySelector('.dish-dialog');
+  if (existingDialog) {
+    existingDialog.remove();
+  }
+
+  // Создаем элемент dialog
+  const dialog = document.createElement('dialog');
+  dialog.classList.add('dish-dialog');
+
+  const closeButton = document.createElement('button');
+  closeButton.classList.add('dish-dialog-close');
+  closeButton.innerHTML = '&times;';
+  closeButton.addEventListener('click', () => {
+    dialog.close();
+    dialog.remove();
+  });
+
+  const title = document.createElement('h3');
+  title.classList.add('dish-dialog-title');
+  title.textContent = dish.title;
+
+  // Изображение блюда
+  if (dish.image) {
+    const image = document.createElement('div');
+    image.classList.add('dish-dialog-image');
+    const img = document.createElement('img');
+    img.src = dish.image;
+    img.alt = dish.title;
+    image.appendChild(img);
+    dialog.appendChild(closeButton);
+    dialog.appendChild(title);
+    dialog.appendChild(image);
+  } else {
+    dialog.appendChild(closeButton);
+    dialog.appendChild(title);
+  }
+
+  // Секция состава
+  const ingredientsSection = document.createElement('div');
+  ingredientsSection.classList.add('dish-dialog-section');
+
+  const ingredientsTitle = document.createElement('h4');
+  ingredientsTitle.textContent = 'Состав:';
+
+  const ingredientsText = document.createElement('p');
+  ingredientsText.classList.add('dish-dialog-ingredients');
+  ingredientsText.textContent = dish.ingredientsText || 'Нет информации';
+
+  ingredientsSection.appendChild(ingredientsTitle);
+  ingredientsSection.appendChild(ingredientsText);
+  dialog.appendChild(ingredientsSection);
+
+  // Пищевая ценность
+  if (dish.nutrition && dish.nutrition.calories > 0) {
+    const nutritionSection = document.createElement('div');
+    nutritionSection.classList.add('dish-dialog-section');
+
+    const nutritionTitle = document.createElement('h4');
+    nutritionTitle.textContent = 'Пищевая ценность на 100 г:';
+
+    const nutritionGrid = document.createElement('div');
+    nutritionGrid.classList.add('dish-dialog-nutrition-grid');
+
+    const nutritionItems = [
+      { label: 'Калорийность', value: `${dish.nutrition.calories} ккал` },
+      { label: 'Белки', value: `${dish.nutrition.proteins} г` },
+      { label: 'Жиры', value: `${dish.nutrition.fats} г` },
+      { label: 'Углеводы', value: `${dish.nutrition.carbohydrates} г` }
+    ];
+
+    nutritionItems.forEach(item => {
+      const itemDiv = document.createElement('div');
+      itemDiv.classList.add('dish-dialog-nutrition-item');
+
+      const itemLabel = document.createElement('span');
+      itemLabel.classList.add('dish-dialog-nutrition-label');
+      itemLabel.textContent = item.label;
+
+      const itemValue = document.createElement('span');
+      itemValue.classList.add('dish-dialog-nutrition-value');
+      itemValue.textContent = item.value;
+
+      itemDiv.appendChild(itemLabel);
+      itemDiv.appendChild(itemValue);
+      nutritionGrid.appendChild(itemDiv);
+    });
+
+    nutritionSection.appendChild(nutritionTitle);
+    nutritionSection.appendChild(nutritionGrid);
+    dialog.appendChild(nutritionSection);
+  }
+
+  // Общий вес блюда
+  if (dish.totalWeight) {
+    const weightInfo = document.createElement('p');
+    weightInfo.classList.add('dish-dialog-weight');
+    weightInfo.textContent = `Общий вес блюда: ${dish.totalWeight} г`;
+    dialog.appendChild(weightInfo);
+  }
+
+  // Добавляем dialog в body
+  document.body.appendChild(dialog);
+
+  // Открываем модальное окно
+  dialog.showModal();
+
+  // Закрытие по клику на backdrop
+  dialog.addEventListener('click', (e) => {
+    const rect = dialog.getBoundingClientRect();
+    if (
+      e.clientX < rect.left ||
+      e.clientX > rect.right ||
+      e.clientY < rect.top ||
+      e.clientY > rect.bottom
+    ) {
+      dialog.close();
+      dialog.remove();
+    }
+  });
+
+  // Удаляем dialog после закрытия
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+  });
 };
 
 /**
@@ -639,7 +773,8 @@ const loadAndRenderDishes = async (programId, weekNumber = null) => {
     dishesData.dishes.forEach(dish => {
       console.log('Обработка блюда:', dish.title, {
         ingredientsText: dish.ingredientsText,
-        calories: dish.calories,
+        nutrition: dish.nutrition,
+        totalWeight: dish.totalWeight,
         weekNumber: dish.weekNumber,
         dayOfWeek: dish.dayOfWeek
       });

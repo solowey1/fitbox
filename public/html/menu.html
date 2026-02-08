@@ -1,0 +1,160 @@
+<!-- Выбор программы -->
+
+<div id="menu">
+  <div class="menu-wrapper">
+    <div class="choose-wrapper">
+      <span>Выберите программу</span>
+      <div class="choose-line"></div>
+    </div>
+    <form class="program-buttons-wrapper">
+      <label class="menu-button program" for="program-1" data-program-id="" disabled>
+        <input type="radio" name="program" id="program-1" value="Офис" hidden>
+        <span>Офис</span>
+      </label>
+      <label class="menu-button program" for="program-2" data-program-id="" disabled>
+        <input type="radio" name="program" id="program-2" value="Баланс" hidden>
+        <span>Баланс</span>
+      </label>
+      <label class="menu-button program" for="program-3" data-program-id="" disabled>
+        <input type="radio" name="program" id="program-3" value="Фитнес" hidden>
+        <span>Фитнес</span>
+      </label>
+      <label class="menu-button program" for="program-4" data-program-id="" disabled>
+        <input type="radio" name="program" id="program-4" value="Классик мини" hidden>
+        <span>Классик мини</span>
+      </label>
+      <label class="menu-button program" for="program-5" data-program-id="" disabled>
+        <input type="radio" name="program" id="program-5" value="Классик" hidden>
+        <span>Классик</span>
+      </label>
+      <label class="menu-button program" for="program-6" data-program-id="" disabled>
+        <input type="radio" name="program" id="program-6" value="Классик +" hidden>
+        <span>Классик +</span>
+      </label>
+    </form>
+    <div id="program-info" class="program-info-wrapper" data-type="menu">
+      <div class="program-title-and-button-wrapper">
+        <div class="program-title-wrapper">
+          <div class="program-logo menu-program-logo">
+            <span class="program-logo-emoji"><span class="loader"></span></span>
+            <span class="program-logo-text">Кушай на&nbsp;работе</span>
+          </div>
+          <div class="program-title">
+            <h2 class="program-title-text">Офис</h2>
+            <span class="program-title-descr calories">800-900</span>
+            <span class="program-title-descr bju">56/17/116 б/ж/у</span>
+            <span class="program-title-descr count">Блюда в день: <span>3</span></span>
+          </div>
+        </div>
+        <a href="#menu" class="menu-button choose-program">Изменить</a>
+      </div>
+      <!--<div class="program-content-wrapper">-->
+      <!--    <div class="program-content-text text">Трехразовое питание на 800-900 ккал/день разнообразит ваш привычный рацион и поможет избежать ежедневных вопросов «что бы сегодня поесть?»</div>-->
+      <!--</div>-->
+    </div>
+    <div class="title-week-wrapper">
+      <div class="week-select-wrapper">
+        <select class="week-select" name="week" disabled>
+          <!--<option value="1">1 неделя</option>-->
+          <!--<option value="2">2 неделя</option>-->
+          <!--<option value="3">3 неделя</option>-->
+          <!--<option value="4">4 неделя</option>-->
+        </select>
+      </div>
+    </div>
+    <div class="content-wrapper">
+      <!--<div class="program-wrapper">-->
+      <!--    <div class="week-wrapper">-->
+      <!--        <div class="day-wrapper" data-day-number="1">-->
+      <!--            <div class="day-title">Рацион питания на пробный день</div>-->
+      <!--            <div class="dishes-wrapper">-->
+      <!--                <div class="dish-card">-->
+      <!--                    <div class="dish-card-image"></div>-->
+      <!--                    <div class="dish-card-content">-->
+      <!--                        <h5 class="dish-card-name"></h5>-->
+      <!--                        <div class="dish-card-ingredients"></div>-->
+      <!--                        <div class="dish-card-calories"></div>-->
+      <!--                    </div>-->
+      <!--                </div>-->
+      <!--            </div>-->
+      <!--        </div>-->
+      <!--    </div>-->
+      <!--</div>-->
+    </div>
+  </div>
+  <div class="summary-wrapper">
+    <div class="program-info-wrapper" data-type="summary">
+      <div class="program-title-wrapper">
+        <div class="program-logo summary-program-logo">
+          <span class="program-logo-emoji"><span class="loader"></span></span>
+          <span class="program-logo-text">Кушай на&nbsp;работе</span>
+        </div>
+        <div class="program-title">
+          <h2 class="program-title-text">Офис</h2>
+          <span class="program-title-descr calories">800-900</span>
+          <span class="program-title-descr bju">56/17/116 б/ж/у</span>
+          <span class="program-title-descr count">Блюд в день: <span>3</span></span>
+        </div>
+      </div>
+      <div class="program-content-wrapper">
+        <div class="program-content-text text">Трехразовое питание на 800-900 ккал/день разнообразит ваш привычный
+          рацион и поможет избежать ежедневных вопросов «что бы сегодня поесть?»</div>
+        <div class="program-content-delivery"></div>
+      </div>
+    </div>
+    <div class="program-days-wrapper">
+      <h4 class="program-days-title">Количество дней</h4>
+      <form class="program-days-form">
+        <label class="menu-button days" for="days-1" data-days-count="1" disabled>
+          <input type="radio" name="days" id="days-1" hidden>
+          <!--<span>Пробный день</span>-->
+        </label>
+        <label class="menu-button days" for="days-2" data-days-count="5" disabled>
+          <input type="radio" name="days" id="days-2" hidden>
+          <!--<span>5 дней</span>-->
+        </label>
+        <label class="menu-button days" for="days-3" data-days-count="6" disabled>
+          <input type="radio" name="days" id="days-3" hidden>
+          <!--<span>6 дней</span>-->
+        </label>
+        <label class="menu-button days" for="days-4" data-days-count="7" disabled>
+          <input type="radio" name="days" id="days-4" hidden>
+          <!--<span>7 дней</span>-->
+        </label>
+        <label class="menu-button days" for="days-5" data-days-count="14" disabled>
+          <input type="radio" name="days" id="days-5" hidden>
+          <!--<span>14 дней</span>-->
+        </label>
+        <label class="menu-button days" for="days-6" data-days-count="28" disabled>
+          <input type="radio" name="days" id="days-6" hidden>
+          <!--<span>28 дней</span>-->
+        </label>
+      </form>
+    </div>
+    <div class="program-days-line-wrapper">
+      <div class="program-days-line"></div>
+      <div class="program-days-line"></div>
+      <div class="program-days-line"></div>
+    </div>
+    <div class="program-cart-wrapper">
+      <div class="program-amount-wrapper">
+        <span class="program-amount-title">Общая сумма</span>
+        <div class="program-amount-block">
+          <s><span class="program-amount old" style="display: none;"></span></s>
+          <div class="program-amount-current-wrapper">
+            <span class="program-amount current"></span>
+            <span class="program-amount discount" style="display: none;"></span>
+          </div>
+          <span class="program-amount day-price"></span>
+        </div>
+      </div>
+      <div class="summary-buttons-wrapper">
+        <button class="menu-button summary-button" name="cart" disabled>
+          <img class="summary-button-icon"
+            src="https://static.tildacdn.com/tild3062-6261-4962-b664-316361303433/shopping-cart.png">
+          <span>Добавить в корзину</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

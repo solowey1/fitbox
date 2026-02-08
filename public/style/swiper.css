@@ -1,0 +1,16 @@
+.swiper-programm {
+  --swiper-navigation-color: var(--primary);
+  margin-left: calc(var(--l) * -1) !important;
+  margin-right: calc(var(--l) * -1) !important;
+}
+
+.swiper-programm .swiper-button-prev,
+.swiper-programm .swiper-button-next {
+  --swiper-navigation-sides-offset: var(--l);
+}
+
+@media screen and (min-width: 961px) {
+  .swiper-programm {
+    display: none !important;
+  }
+}

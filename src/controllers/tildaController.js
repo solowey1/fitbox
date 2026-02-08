@@ -351,9 +351,7 @@ const getProgramDishes = async (req, res) => {
       return {
         id: row.id,
         title: row.title,
-        image: row.images && row.images.length > 0
-          ? `${req.protocol}://${req.get('host')}/${row.images[0].path}`
-          : null,
+        image: row.image || '',
         dayOfWeek: row.day_of_week,
         weekNumber: row.week_number,
         dishNumber: row.dish_number,
@@ -450,9 +448,7 @@ const getDishDetails = async (req, res) => {
     res.json({
       id: dish.id,
       title: dish.title,
-      image: dish.images && dish.images.length > 0
-        ? `${req.protocol}://${req.get('host')}/${dish.images[0].path}`
-        : null,
+      image: dish.image || '',
       ingredients: dish.ingredients || [],
       ingredientsText: ingredientsText,
       nutrition: {

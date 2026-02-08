@@ -1,7 +1,7 @@
 // ====================
 // КОНФИГУРАЦИЯ API
 // ====================
-const API_BASE_URL = 'https://fitbox.necodim.ru/api';
+const API_BASE_URL = 'https://app.fitbox.su/api';
 
 // Стандартные настройки при загрузке страницы (выбранные программа и количество дней)
 const defaultSettings = {

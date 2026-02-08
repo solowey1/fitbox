@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS prices (
 CREATE TABLE IF NOT EXISTS dishes (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
-    images JSONB, -- Массив URL изображений: [{"path":"download/noco/p4abb31hvuzym5i/mt9rajh3b75ospb/c2alndpm9q88won/000010 Tvoroznaa zapekanka s malinoj i jogurt_Llor1.png","title":"000010 Tvoroznaa zapekanka s malinoj i jogurt.png","mimetype":"image/png","size":362717,"width":500,"height":365,"id":"atp4numailg582v7"}]
+    image VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
