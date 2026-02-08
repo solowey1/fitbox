@@ -65,11 +65,11 @@ const getDishWithIngredients = async (req, res) => {
 // Создать блюдо
 const createDish = async (req, res) => {
   try {
-    const { title, images } = req.body;
+    const { title, image } = req.body;
 
     const result = await db.query(
-      'INSERT INTO dishes (title, images) VALUES ($1, $2) RETURNING *',
-      [title, JSON.stringify(images || [])]
+      'INSERT INTO dishes (title, image) VALUES ($1, $2) RETURNING *',
+      [title, image]
     );
 
     res.status(201).json(result.rows[0]);
@@ -83,11 +83,11 @@ const createDish = async (req, res) => {
 const updateDish = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, images } = req.body;
+    const { title, image } = req.body;
 
     const result = await db.query(
-      'UPDATE dishes SET title = $1, images = $2 WHERE id = $3 RETURNING *',
-      [title, JSON.stringify(images), id]
+      'UPDATE dishes SET title = $1, image = $2 WHERE id = $3 RETURNING *',
+      [title, JSON.stringify(image), id]
     );
 
     if (result.rows.length === 0) {

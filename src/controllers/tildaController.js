@@ -218,7 +218,7 @@ const getProgramDishes = async (req, res) => {
       SELECT
         d.id,
         d.title,
-        d.images,
+        d.image,
         npd.day_of_week,
         npd.week_number,
         npd.dish_number,
@@ -396,7 +396,7 @@ const getDishDetails = async (req, res) => {
       SELECT
         d.id,
         d.title,
-        d.images,
+        d.image,
         d.created_at,
         d.updated_at,
         COALESCE(
@@ -417,7 +417,7 @@ const getDishDetails = async (req, res) => {
       LEFT JOIN dish_ingredients di ON d.id = di.dish_id
       LEFT JOIN ingredients i ON di.ingredient_id = i.id
       WHERE d.id = $1
-      GROUP BY d.id, d.title, d.images, d.created_at, d.updated_at
+      GROUP BY d.id, d.title, d.image, d.created_at, d.updated_at
     `, [dishId]);
 
     if (result.rows.length === 0) {

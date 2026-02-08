@@ -137,7 +137,7 @@ curl -X POST http://localhost:3000/api/dishes \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Стейк из говядины с овощами гриль",
-    "images": ["/uploads/steak1.jpg", "/uploads/steak2.jpg"]
+    "image": "/uploads/chicken-updated.jpg"
   }'
 ```
 
@@ -147,7 +147,7 @@ curl -X PUT http://localhost:3000/api/dishes/1 \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Куриная грудка с бурым рисом и брокколи",
-    "images": ["/uploads/chicken-updated.jpg"]
+    "image": "/uploads/chicken-updated.jpg"
   }'
 ```
 
@@ -300,7 +300,7 @@ curl -X DELETE http://localhost:3000/api/orders/1
 {
   "id": 1,
   "title": "Куриная грудка с рисом и овощами",
-  "images": ["uploads/dish1.jpg"],
+  "image": "uploads/dish1.jpg",
   "ingredients": [
     {
       "id": 1,
