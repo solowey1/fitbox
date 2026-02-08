@@ -564,6 +564,15 @@ const renderDishCard = (dish) => {
   name.classList.add('dish-card-name');
   name.textContent = dish.title;
 
+  const ingredients = document.createElement('div');
+  ingredients.classList.add('dish-card-ingredients');
+  // Выводим массив ингредиентов через запятую (без количества)
+  if (dish.ingredients && dish.ingredients.length > 0) {
+    ingredients.textContent = dish.ingredients.join(', ');
+  } else {
+    ingredients.textContent = 'Нет информации об ингредиентах';
+  }
+
   const nutrition = document.createElement('div');
   nutrition.classList.add('dish-card-nutrition');
 
@@ -575,6 +584,7 @@ const renderDishCard = (dish) => {
   }
 
   content.appendChild(name);
+  content.appendChild(ingredients);
   content.appendChild(nutrition);
 
   card.appendChild(image);
@@ -593,14 +603,14 @@ const renderDishCard = (dish) => {
  */
 const showDishModal = (dish) => {
   // Проверяем, есть ли уже dialog, если есть - удаляем
-  const existingDialog = document.querySelector('.dish-dialog');
+  const existingDialog = document.querySelector('#dish-dialog ');
   if (existingDialog) {
     existingDialog.remove();
   }
 
   // Создаем элемент dialog
   const dialog = document.createElement('dialog');
-  dialog.classList.add('dish-dialog');
+  dialog.id = 'dish-dialog';
 
   const closeButton = document.createElement('button');
   closeButton.classList.add('dish-dialog-close');
@@ -772,9 +782,11 @@ const loadAndRenderDishes = async (programId, weekNumber = null) => {
     const dishesByWeek = {};
     dishesData.dishes.forEach(dish => {
       console.log('Обработка блюда:', dish.title, {
+        ingredients: dish.ingredients,
         ingredientsText: dish.ingredientsText,
         nutrition: dish.nutrition,
         totalWeight: dish.totalWeight,
+        image: dish.image,
         weekNumber: dish.weekNumber,
         dayOfWeek: dish.dayOfWeek
       });

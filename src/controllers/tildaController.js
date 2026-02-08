@@ -231,6 +231,16 @@ const getProgramDishes = async (req, res) => {
           ),
           'Нет информации'
         ) as ingredients_text,
+        -- Массив названий ингредиентов (без количества) для карточки
+        COALESCE(
+          (
+            SELECT json_agg(i.title ORDER BY di.id)
+            FROM dish_ingredients di
+            JOIN ingredients i ON di.ingredient_id = i.id
+            WHERE di.dish_id = d.id
+          ),
+          '[]'
+        ) as ingredients,
         -- Общий вес блюда (сумма всех ингредиентов)
         COALESCE(
           (
@@ -355,6 +365,7 @@ const getProgramDishes = async (req, res) => {
         dayOfWeek: row.day_of_week,
         weekNumber: row.week_number,
         dishNumber: row.dish_number,
+        ingredients: row.ingredients || [],
         ingredientsText: row.ingredients_text || 'Нет информации',
         totalWeight: Math.round(totalWeight),
         nutrition: {

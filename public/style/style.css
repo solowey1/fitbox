@@ -438,6 +438,16 @@
   border: none;
   border-radius: var(--xl);
   padding: var(--m);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dish-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dish-card:active {
+  transform: translateY(-2px);
 }
 
 .dish-card-image {
@@ -469,13 +479,13 @@
   margin-bottom: var(--s);
 }
 
-.dish-card-calories {
+.dish-card-nutrition {
   font-size: 12px;
   font-weight: 400;
   color: var(--grey-1);
 }
 
-.dish-card-calories::after {
+.dish-card-nutrition::after {
   /*content: 'ккал';*/
   margin-left: calc(var(--s) / 4);
 }
@@ -1058,7 +1068,7 @@
       margin-bottom: var(--xs);
   }
   
-  .dish-card-calories {
+  .dish-card-nutrition {
       font-size: 9px;
   }
   

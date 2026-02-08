@@ -803,7 +803,7 @@ const renderDishCard = (data, wrapper) => {
   ingredients.classList.add('dish-card-ingredients');
   ingredients.innerHTML = data.ingredients;
   const calories = document.createElement('div');
-  calories.classList.add('dish-card-calories');
+  calories.classList.add('dish-card-nutrition');
   calories.innerHTML = data.calories;
   content.appendChild(name);
   content.appendChild(ingredients);
