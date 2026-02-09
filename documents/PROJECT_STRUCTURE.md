@@ -3,16 +3,28 @@
 ```
 backend/
 │
-├── migrations/                      # SQL миграции базы данных
-│   ├── 001_initial_schema.sql      # Создание всех таблиц с индексами и триггерами
-│   └── 002_seed_data.sql           # Тестовые данные для быстрого старта
+├── documents/                      # Документация
+│   ├── API_AUTHENTICATION.md       # Аутентификация и доступ по API
+│   ├── API_EXAMPLES.md             # Примеры запросов к API
+│   ├── CACHING.md                  # Кэширование с Redis/In-memory
+│   ├── LAZY_LOADING_README.md      # Lazy loading изображений и расчет недели
+│   ├── PROJECT_STRUCTURE.md        # Структура проекта (этот файл)
+│   ├── QUICKSTART.md               # Быстрый старт
+│   ├── TILDA_API.md                # API для Tilda frontend
+│   └── TILDA_CONNECT.md            # Подключение скриптов на Tilda
+│
+├── migrations/                     # SQL миграции базы данных
+│   └── 001_initial_schema.sql      # Создание всех таблиц с индексами и триггерами
+│   # Примечание: тестовые данные в .bak файлах для справки
 │
 ├── public/                         # Статические файлы
-│   └── uploads/                    # Загруженные изображения блюд
+│   └── uploads/                    # Загруженные изображения блюд (сейчас хранятся на Tilda)
 │
 ├── scripts/                        # Вспомогательные скрипты
 │   ├── migrate.js                  # Скрипт запуска миграций
-│   └── test-db.js                  # Проверка подключения к БД
+│   ├── test-db.js                  # Проверка подключения к БД
+│   ├── tilda.js                    # Скрипт для Tilda (текущая версия)
+│   └── tilda_old.js                # Устаревший скрипт для обратной совместимости
 │
 ├── src/                            # Исходный код приложения
 │   ├── config/                     # Конфигурация
@@ -22,26 +34,29 @@ backend/
 │   │   ├── citiesController.js             # CRUD для городов
 │   │   ├── dishesController.js             # CRUD для блюд
 │   │   ├── nutritionProgramsController.js  # CRUD для программ питания
-│   │   └── ordersController.js             # CRUD для заказов
+│   │   ├── ordersController.js             # CRUD для заказов
+│   │   └── tildaController.js              # API для Tilda frontend
 │   │
 │   ├── routes/                     # Маршруты API
 │   │   ├── cities.js               # /api/cities
 │   │   ├── dishes.js               # /api/dishes
 │   │   ├── nutritionPrograms.js    # /api/programs
-│   │   └── orders.js               # /api/orders
+│   │   ├── orders.js               # /api/orders
+│   │   └── tilda.js                # /api/tilda (публичный API для Tilda)
 │   │
-│   ├── middleware/                 # Middleware (пусто, для будущего расширения)
+│   ├── middleware/                 # Middleware
+│   │   ├── authMiddleware.js       # Аутентификация по API ключу
+│   │   ├── cacheMiddleware.js      # Кэширование (Redis/In-memory)
+│   │   └── corsMiddleware.js       # CORS конфигурация
+│   │
 │   └── models/                     # Модели (пусто, для будущего расширения)
 │
 ├── .env                            # Переменные окружения (не в git)
 ├── .env.example                    # Пример переменных окружения
 ├── .gitignore                      # Игнорируемые файлы для git
-├── API_EXAMPLES.md                 # Примеры запросов к API
 ├── package.json                    # Зависимости и скрипты npm
-├── QUICKSTART.md                   # Быстрый старт проекта
 ├── README.md                       # Основная документация
-├── PROJECT_STRUCTURE.md            # Этот файл
-└── index.js                       # Точка входа приложения
+└── index.js                        # Точка входа приложения
 ```
 
 ## Описание основных компонентов
@@ -126,6 +141,15 @@ SQL-файлы для создания и изменения структуры 
 - `PUT /api/orders/:id` - обновить заказ
 - `DELETE /api/orders/:id` - удалить заказ
 
+### Tilda API (публичный, без аутентификации)
+- `GET /api/tilda/menu` - все данные меню (программы, города, цены)
+- `GET /api/tilda/menu/:programId/dishes` - блюда программы
+- `GET /api/tilda/dishes/:dishId` - детали блюда с ингредиентами
+
+### Cache Management (требует API ключ)
+- `POST /api/cache/clear` - очистить кэш
+- `GET /api/cache/stats` - статистика кэша
+
 ### Utility
 - `GET /health` - проверка работы сервера
 
@@ -135,9 +159,7 @@ SQL-файлы для создания и изменения структуры 
 npm start          # Запуск продакшен сервера
 npm run dev        # Запуск с автоперезагрузкой (nodemon)
 npm run test:db    # Проверка подключения к БД
-npm run migrate    # Запуск всех миграций
-npm run migrate:schema  # Только создание таблиц
-npm run migrate:seed    # Только тестовые данные
+npm run migrate    # Запуск миграций (создание схемы БД)
 ```
 
 ## Технологический стек
@@ -146,6 +168,7 @@ npm run migrate:seed    # Только тестовые данные
 - **Express.js 5** - веб-фреймворк для создания API
 - **PostgreSQL** - реляционная база данных
 - **pg** - PostgreSQL клиент для Node.js
+- **ioredis** - клиент Redis для кэширования (опционально)
 - **dotenv** - управление переменными окружения
 - **cors** - обработка CORS-запросов
 - **nodemon** (dev) - автоперезагрузка при разработке
@@ -153,30 +176,47 @@ npm run migrate:seed    # Только тестовые данные
 ## Переменные окружения
 
 ```env
+# Сервер
 PORT=3000                          # Порт сервера
 NODE_ENV=development               # Окружение (development/production)
+
+# PostgreSQL
 DB_HOST=localhost                  # Хост PostgreSQL
 DB_PORT=5432                       # Порт PostgreSQL
 DB_NAME=fitbox                     # Имя базы данных
 DB_USER=postgres                   # Пользователь БД
 DB_PASSWORD=                       # Пароль БД
+
+# Безопасность
+API_KEY=                           # API ключ для защищенных операций (POST/PUT/DELETE)
 CORS_ORIGIN=http://localhost:5173  # Разрешенный origin для CORS
+
+# Redis (опционально)
+REDIS_HOST=localhost               # Хост Redis
+REDIS_PORT=6379                    # Порт Redis
+REDIS_PASSWORD=                    # Пароль Redis
+CACHE_TTL=600                      # Время жизни кэша (секунды)
 ```
 
 ## Дальнейшее развитие
 
+### Реализовано:
+
+✅ **Аутентификация** - API ключ для защищенных операций (POST/PUT/DELETE)
+✅ **Кэширование** - Redis/In-memory для публичных API эндпоинтов
+✅ **CORS** - настроенная политика CORS
+✅ **Статические файлы** - раздача скриптов и изображений
+
 ### Рекомендуемые улучшения:
 
-1. **Валидация данных** - добавить библиотеку типа joi или express-validator
-2. **Аутентификация** - JWT токены для защищенных endpoints
-3. **Логирование** - morgan или winston для логов
-4. **Rate limiting** - защита от перегрузки API
-5. **Загрузка файлов** - multer для загрузки изображений
-6. **Пагинация** - для списков данных
-7. **Фильтрация и сортировка** - расширенные query параметры
-8. **Тесты** - unit и integration тесты (jest, supertest)
-9. **API документация** - Swagger/OpenAPI
-10. **Кеширование** - Redis для часто запрашиваемых данных
+1. **Валидация данных** - joi или express-validator
+2. **JWT токены** - для аутентификации пользователей (сейчас только API ключ для админов)
+3. **Логирование** - morgan или winston
+4. **Rate limiting** - защита от перегрузки
+5. **Загрузка файлов** - multer для изображений
+6. **Пагинация** - для списков
+7. **Тесты** - jest, supertest
+8. **API документация** - Swagger/OpenAPI
 
 ### Потенциальные фичи:
 

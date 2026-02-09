@@ -450,17 +450,6 @@
   transform: translateY(-2px);
 }
 
-.dish-card-image {
-  /*min-width: calc(160px - var(--m) * 2);*/
-  width: 100%;
-  aspect-ratio: 1.4;
-  border-radius: var(--l);
-  margin-bottom: var(--m);
-  background-position: center center;
-  background-repeat: no-repeat no-repeat;
-  background-size: contain;
-}
-
 .dish-card-content {
   
 }

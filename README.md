@@ -4,9 +4,10 @@ Backend API для сервиса доставки готовой еды Fitbox.
 
 ## Технологии
 
-- Node.js + Express.js
+- Node.js + Express.js 5
 - PostgreSQL
-- CORS, dotenv
+- Redis (опционально, для кэширования)
+- ioredis, pg, dotenv, cors
 
 ## Структура базы данных
 
@@ -71,24 +72,7 @@ CORS_ORIGIN=http://localhost:5173
 npm run migrate
 ```
 
-Этот скрипт автоматически выполнит все миграции из папки `migrations/` в алфавитном порядке.
-
-**Альтернативно**, можно запустить миграции отдельно:
-
-```bash
-# Только создание таблиц
-npm run migrate:schema
-
-# Только тестовые данные
-npm run migrate:seed
-```
-
-Или вручную через psql:
-
-```bash
-psql -U postgres -d fitbox -f migrations/001_initial_schema.sql
-psql -U postgres -d fitbox -f migrations/002_seed_data.sql
-```
+Этот скрипт выполнит создание схемы базы данных из `migrations/001_initial_schema.sql`
 
 ### 5. Запуск сервера
 
@@ -103,6 +87,19 @@ npm start
 ```
 
 Сервер запустится на `http://localhost:3000`
+
+## Документация
+
+Подробная документация находится в папке [documents/](./documents/):
+
+- **[Быстрый старт](./documents/QUICKSTART.md)** - минимальная инструкция для запуска
+- **[Структура проекта](./documents/PROJECT_STRUCTURE.md)** - подробное описание архитектуры
+- **[API примеры](./documents/API_EXAMPLES.md)** - примеры всех запросов к API
+- **[Аутентификация](./documents/API_AUTHENTICATION.md)** - настройка и использование API ключа
+- **[Кэширование](./documents/CACHING.md)** - Redis и in-memory кэш
+- **[Tilda API](./documents/TILDA_API.md)** - API для Tilda frontend
+- **[Подключение к Tilda](./documents/TILDA_CONNECT.md)** - установка скриптов на Tilda
+- **[Lazy Loading](./documents/LAZY_LOADING_README.md)** - оптимизация загрузки изображений
 
 ## API Endpoints
 
@@ -136,105 +133,78 @@ npm start
 - `PUT /api/orders/:id` - обновить заказ
 - `DELETE /api/orders/:id` - удалить заказ
 
+### Tilda API (публичный, без аутентификации)
+- `GET /api/tilda/menu` - все данные меню (программы, города, цены)
+- `GET /api/tilda/menu/:programId/dishes` - блюда программы
+- `GET /api/tilda/dishes/:dishId` - детали блюда с ингредиентами
+
+### Cache Management (требует API ключ)
+- `POST /api/cache/clear` - очистить кэш
+- `GET /api/cache/stats` - статистика кэша
+
 ### Health Check
 - `GET /health` - проверка работоспособности сервера
 
+> 📝 **Примечание:** POST, PUT, DELETE запросы требуют API ключ. Подробнее в [API_AUTHENTICATION.md](./documents/API_AUTHENTICATION.md)
+
 ## Примеры использования
 
-### Создание города
+### Получить данные (публичный доступ)
 
 ```bash
-curl -X POST http://localhost:3000/api/cities \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Москва",
-    "descr": "Столица России",
-    "started_at": "2024-01-01"
-  }'
+# Получить программы питания
+curl http://localhost:3000/api/programs
+
+# Получить меню для Tilda
+curl http://localhost:3000/api/tilda/menu
 ```
 
-### Создание программы питания
+### Создать данные (требует API ключ)
 
 ```bash
+# Создать программу питания
 curl -X POST http://localhost:3000/api/programs \
   -H "Content-Type: application/json" \
-  -d '{
-    "title": "Баланс",
-    "emoji": "⚖️",
-    "data": {
-      "calories_from": 1200,
-      "calories_to": 1500,
-      "proteins": 100,
-      "fats": 50,
-      "carbohydrates": 150
-    },
-    "city_id": 1,
-    "sort": 1
-  }'
+  -H "X-API-Key: your-api-key" \
+  -d '{"title": "Баланс", "emoji": "⚖️", "sort": 1}'
 ```
 
-### Создание заказа
-
-```bash
-curl -X POST http://localhost:3000/api/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Иван Иванов",
-    "phone": "+7 999 123-45-67",
-    "city": "Москва",
-    "address": "ул. Ленина, д. 1, кв. 10",
-    "comment": "Доставка после 18:00",
-    "promocode": "SALE10",
-    "current_price": 5400,
-    "items": [
-      {
-        "nutrition_program_id": 1,
-        "price_id": 1,
-        "quantity": 1,
-        "price": 5400
-      }
-    ]
-  }'
-```
+> 📖 **Больше примеров:** [documents/API_EXAMPLES.md](./documents/API_EXAMPLES.md)
 
 ## Структура проекта
 
 ```
 backend/
-├── migrations/           # SQL миграции
-│   └── 001_initial_schema.sql
-├── public/
-│   └── uploads/         # Загруженные изображения
+├── documents/           # 📚 Документация
+├── migrations/          # 🗄️  SQL миграции
+├── public/              # 📦 Статические файлы (HTML, CSS)
+├── scripts/             # 🔧 Вспомогательные скрипты (migrate, tilda)
 ├── src/
-│   ├── config/          # Конфигурация (БД)
-│   │   └── database.js
-│   ├── controllers/     # Контроллеры API
-│   │   ├── citiesController.js
-│   │   ├── dishesController.js
-│   │   ├── nutritionProgramsController.js
-│   │   └── ordersController.js
-│   ├── routes/          # Маршруты API
-│   │   ├── cities.js
-│   │   ├── dishes.js
-│   │   ├── nutritionPrograms.js
-│   │   └── orders.js
-│   ├── middleware/      # Middleware (будущие)
-│   └── models/          # Модели (будущие)
-├── .env                 # Переменные окружения (не в git)
-├── .env.example         # Пример переменных
-├── .gitignore
+│   ├── config/          # ⚙️  Конфигурация (БД)
+│   ├── controllers/     # 🎮 Контроллеры API
+│   ├── routes/          # 🛣️  Маршруты API
+│   └── middleware/      # 🔒 Middleware (auth, cache, cors)
+├── .env                 # 🔐 Переменные окружения (не в git)
 ├── package.json
-├── index.js            # Точка входа
-└── README.md
+└── index.js             # 🚀 Точка входа
 ```
+
+> 📖 **Подробнее:** [documents/PROJECT_STRUCTURE.md](./documents/PROJECT_STRUCTURE.md)
+
+## Реализованные фичи
+
+✅ **Аутентификация** - API ключ для защищенных операций
+✅ **Кэширование** - Redis/In-memory кэш для оптимизации
+✅ **CORS** - настроенная политика безопасности
+✅ **Tilda API** - специальный публичный API для фронтенда
+✅ **Статические файлы** - раздача скриптов и стилей
 
 ## Дальнейшее развитие
 
-- Добавить валидацию входящих данных
-- Добавить аутентификацию и авторизацию
-- Добавить логирование запросов
-- Добавить rate limiting
-- Добавить загрузку изображений
-- Добавить пагинацию для списков
-- Добавить фильтрацию и сортировку
-- Добавить тесты
+- Валидация данных (joi/express-validator)
+- JWT токены для пользователей
+- Логирование (morgan/winston)
+- Rate limiting
+- Пагинация и фильтрация
+- Unit/Integration тесты
+- API документация (Swagger)

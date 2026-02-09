@@ -32,7 +32,7 @@ API_KEY=ваш_сгенерированный_ключ_здесь
 ### Способ 1: Заголовок X-API-Key (рекомендуется)
 
 ```bash
-curl -X POST https://api.fitbox.su/api/programs \
+curl -X POST https://app.fitbox.su/api/programs \
   -H "X-API-Key: your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"title":"Новая программа"}'
@@ -41,7 +41,7 @@ curl -X POST https://api.fitbox.su/api/programs \
 ### Способ 2: Authorization заголовок
 
 ```bash
-curl -X POST https://api.fitbox.su/api/programs \
+curl -X POST https://app.fitbox.su/api/programs \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"title":"Новая программа"}'
@@ -50,7 +50,7 @@ curl -X POST https://api.fitbox.su/api/programs \
 ### Способ 3: Query параметр (НЕ рекомендуется)
 
 ```bash
-curl -X POST "https://api.fitbox.su/api/programs?api_key=your-api-key" \
+curl -X POST "https://app.fitbox.su/api/programs?api_key=your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"title":"Новая программа"}'
 ```
@@ -65,11 +65,11 @@ curl -X POST "https://api.fitbox.su/api/programs?api_key=your-api-key" \
 const API_KEY = process.env.API_KEY; // Храните в переменных окружения!
 
 // Публичный запрос (без ключа)
-const programs = await fetch('https://api.fitbox.su/api/programs');
+const programs = await fetch('https://app.fitbox.su/api/programs');
 const data = await programs.json();
 
 // Защищенный запрос (с ключом)
-const response = await fetch('https://api.fitbox.su/api/programs', {
+const response = await fetch('https://app.fitbox.su/api/programs', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ const response = await fetch('https://api.fitbox.su/api/programs', {
 const axios = require('axios');
 
 const api = axios.create({
-  baseURL: 'https://api.fitbox.su/api',
+  baseURL: 'https://app.fitbox.su/api',
   headers: {
     'X-API-Key': process.env.API_KEY
   }
@@ -112,7 +112,7 @@ API_KEY = os.getenv('API_KEY')
 
 # Защищенный запрос
 response = requests.post(
-    'https://api.fitbox.su/api/programs',
+    'https://app.fitbox.su/api/programs',
     headers={'X-API-Key': API_KEY},
     json={'title': 'Новая программа', 'emoji': '🏃'}
 )

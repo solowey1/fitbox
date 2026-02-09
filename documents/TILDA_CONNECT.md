@@ -7,51 +7,48 @@
 Добавьте в Tilda Zero Block или в настройки страницы (T123 → Настройки → Дополнительно → HTML-код для вставки внутри <head>):
 
 ```html
-<!-- Упрощенный скрипт для меню Fitbox -->
-<script src="https://jade-oak-9eb2.tunnl.gg/scripts/tilda-simple.js"></script>
+<!-- Скрипт для меню Fitbox -->
+<script src="https://app.fitbox.su/scripts/tilda.js"></script>
 ```
 
 ### Вариант 2: Inline скрипт (если CDN недоступен)
 
-Скопируйте содержимое файла `tilda-simple.js` и вставьте в Zero Block:
+Скопируйте содержимое файла `tilda.js` и вставьте в Zero Block:
 
 ```html
 <script>
-// Вставьте сюда содержимое tilda-simple.js
+// Вставьте сюда содержимое tilda.js
 </script>
 ```
 
 ## Доступные скрипты
 
-### tilda-simple.js (Рекомендуется)
+### tilda.js (Рекомендуется)
 
-**Размер:** ~15 KB
 **Описание:** Упрощенная версия с использованием единого API эндпоинта
 
 **Особенности:**
-- ✅ Один запрос вместо множества
+- ✅ Два запроса вместо множества
 - ✅ Автоопределение города по поддомену
 - ✅ Минимальная логика на фронтенде
-- ✅ ~400 строк кода вместо 1000+
 
-**URL:** `https://jade-oak-9eb2.tunnl.gg/scripts/tilda-simple.js`
+**URL:** `https://app.fitbox.su/scripts/tilda.js`
 
-### tilda.js (Legacy)
+### tilda-old.js (Legacy)
 
-**Размер:** ~40 KB
 **Описание:** Оригинальная версия с множеством запросов к API
 
 **Использовать только для:**
 - Обратной совместимости со старыми страницами
 - Специфических кастомизаций
 
-**URL:** `https://jade-oak-9eb2.tunnl.gg/scripts/tilda.js`
+**URL:** `https://app.fitbox.su/scripts/tilda-old.js`
 
 ## Требования
 
 ### HTML структура
 
-Скрипт ожидает следующую структуру HTML на странице:
+Скрипт ожидает следующую структуру HTML на странице (`public/web/html/target.html`):
 
 ```html
 <!-- Блок с кнопками выбора цели -->
@@ -110,6 +107,11 @@
 - Нет! Скрипт использует только нативный JavaScript
 
 **Опциональные:**
+- **Inter** (шрифт)
+  ```html
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+  ```
+
 - **Swiper.js** (для слайдера программ)
   ```html
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
@@ -125,11 +127,10 @@
 
 ### Изменение API URL
 
-По умолчанию используется туннель. Для продакшена измените:
+По умолчанию используется [https://app.fitbox.su/api](https://app.fitbox.su/api). Для изменения поменяйте в скрипте `scripts/tilda.js`:
 
 ```javascript
-// В начале файла tilda-simple.js
-const API_BASE_URL = 'https://api.fitbox.su/api';
+const API_BASE_URL = 'https://app.fitbox.su/api';
 ```
 
 ### Настройка городов
@@ -144,6 +145,20 @@ const API_BASE_URL = 'https://api.fitbox.su/api';
 | `tlt` | Тольятти |
 | `dmt` | Дмитровград |
 
+## Кэширование
+
+Скрипт автоматически кэширует данные в localStorage на **60 минут**, что значительно ускоряет загрузку страницы при повторных визитах.
+
+### Очистка кэша
+
+Если нужно обновить данные принудительно, откройте консоль браузера (F12) и выполните:
+
+```javascript
+window.clearFitboxCache(); // Очистить кэш
+```
+
+Затем обновите страницу (F5) для загрузки свежих данных.
+
 ## Отладка
 
 ### Проверка загрузки данных
@@ -153,6 +168,15 @@ const API_BASE_URL = 'https://api.fitbox.su/api';
 ```javascript
 console.log(window.menuData); // Все данные меню
 console.log(window.currentProgram); // Текущая выбранная программа
+```
+
+### Проверка кэша
+
+В консоли будут видны сообщения:
+```
+✓ Данные загружены из кэша: menu_
+✓ Данные сохранены в кэш: dishes_1_all_all (TTL: 60 мин)
+⟳ Загрузка данных меню с сервера...
 ```
 
 ### Типичные ошибки
@@ -167,7 +191,7 @@ console.log(window.currentProgram); // Текущая выбранная про�
 Решение:
 ```javascript
 // Проверьте в консоли
-fetch('https://jade-oak-9eb2.tunnl.gg/api/tilda/menu')
+fetch('https://app.fitbox.su/api/tilda/menu')
   .then(r => r.json())
   .then(console.log)
   .catch(console.error);
@@ -198,19 +222,12 @@ console.log(document.querySelector('.program-buttons-wrapper')); // Должен
 
 1. **Используйте async/defer** при подключении скрипта:
 ```html
-<script src="https://jade-oak-9eb2.tunnl.gg/scripts/tilda-simple.js" defer></script>
+<script src="https://app.fitbox.su/scripts/tilda.js" defer></script>
 ```
 
 2. **Включите кэширование** на стороне сервера (уже настроено: 1 час)
 
 3. **Используйте CDN** для статики (Cloudflare автоматически кэширует)
-
-### Размеры файлов
-
-| Файл | Размер (несжатый) | Размер (gzip) |
-|------|-------------------|---------------|
-| tilda-simple.js | ~15 KB | ~4 KB |
-| tilda.js | ~40 KB | ~10 KB |
 
 ## Версионирование
 
@@ -218,27 +235,17 @@ console.log(document.querySelector('.program-buttons-wrapper')); // Должен
 
 ```html
 <!-- Без версии (всегда последняя) -->
-<script src="https://jade-oak-9eb2.tunnl.gg/scripts/tilda-simple.js"></script>
+<script src="https://app.fitbox.su/scripts/tilda.js"></script>
 
 <!-- С версией (рекомендуется для продакшена) -->
-<script src="https://jade-oak-9eb2.tunnl.gg/scripts/tilda-simple.js?v=1.0.0"></script>
+<script src="https://app.fitbox.su/scripts/tilda.js?v=1.0.0"></script>
 ```
-
-## Миграция
-
-### С tilda.js на tilda-simple.js
-
-1. Замените URL скрипта
-2. Проверьте работу на тестовой странице
-3. Обновите на всех страницах
-
-**Никаких изменений в HTML не требуется!**
 
 ## Поддержка
 
 При возникновении проблем:
 
 1. Проверьте консоль браузера (F12)
-2. Проверьте доступность API: https://jade-oak-9eb2.tunnl.gg/api/tilda/menu
+2. Проверьте доступность API: https://app.fitbox.su/api/tilda/menu
 3. Убедитесь, что HTML структура соответствует требованиям
 4. Проверьте подключение зависимостей (Swiper, html2canvas)

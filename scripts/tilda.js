@@ -1,170 +1,68 @@
 // ====================
-// КОНФИГУРАЦИЯ API
+// КОНФИГУРАЦИЯ
 // ====================
 const API_BASE_URL = 'https://app.fitbox.su/api';
 
-// Стандартные настройки при загрузке страницы (выбранные программа и количество дней)
-const defaultSettings = {
-  program: 'Офис',
-  days: 7,
-  maxDays: 7,
-  maxWeeks: 4,
-};
-
-// Города
-const CITY = {
-  KAZAN: 'Казань',
-  SAMARA: 'Самара',
-  TOLYATTI: 'Тольятти',
-  DMITROVGRAD: 'Дмитровград',
-  ULYANOVSK: 'Ульяновск',
-};
-
-// Данные о городах
-const CITIES = {
-  [CITY.KAZAN]: {
-    subdomain: 'kzn',
-  },
-  [CITY.SAMARA]: {
-    subdomain: 'smr',
-  },
-  [CITY.TOLYATTI]: {
-    subdomain: 'tlt',
-  },
-  [CITY.DMITROVGRAD]: {
-    subdomain: 'dmt',
-  },
-  [CITY.ULYANOVSK]: {
-    subdomain: '',
-  },
-};
-
-const CONFIG_PROGRAMM = {
-  classname: 'swiper-programm',
-}
-
-window.programs = new Array();
+// DOM элементы
 const blockMenu = document.getElementById('menu');
 const blockTarget = document.getElementById('target');
-let swiperProgramm;
-let _program = new Object();
 
-Object.defineProperty(window, 'program', {
-  get: function () {
-    return _program;
-  },
-  set: function (currentProgram) {
-    if (_program !== currentProgram) {
-      targetActivate(currentProgram);
-      swiperGoTo(currentProgram);
-      programBtnActivate(currentProgram);
-      _program = currentProgram;
-    }
-  }
-});
+// Глобальные переменные
+window.menuData = null;
+window.currentProgram = null;
+window.selectedDays = null; // Сохраняем выбранное количество дней
+let swiperProgramm = null;
+let imageObserver = null; // Intersection Observer для lazy loading изображений
 
-const createImageFrom = (selector) => {
-  return new Promise((resolve, reject) => {
-    const element = document.querySelector(selector);
-    if (!element) {
-      reject('Элемент не найден');
-      return;
-    }
-
-    html2canvas(element, { logging: true, letterRendering: 1, useCORS: true })
-      .then(canvas => {
-        resolve(canvas.toDataURL('image/png'));
-      })
-      .catch(error => {
-        reject('Ошибка при создании изображения: ' + error.message);
-      });
-  });
-}
-
-const scrollToElement = (elementOrSelector) => {
-  const element = elementOrSelector instanceof HTMLElement ? elementOrSelector : document.querySelector(elementOrSelector);
-  if (element) {
-    element.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }
-}
-
-// Функция для прокрутки к текущему дню
-const scrollToCurrentDay = (weekNumber, dayNumber) => {
-  // Находим нужную неделю
-  const weekWrapper = document.querySelector(`.week-wrapper[data-week-number="${weekNumber}"]`);
-
-  if (!weekWrapper) {
-    console.warn(`Неделя ${weekNumber} не найдена`);
-    return false;
-  }
-
-  // Находим нужный день относительно даты старта
-  const currentDayNumber = getCurrentDayInCycle(window.programs[0].start);
-  const dayWrapper = weekWrapper.querySelector(`.day-wrapper[data-day-number="${currentDayNumber}"]`);
-
-  if (!dayWrapper) {
-    console.warn(`День ${currentDayNumber} не найден в неделе ${weekNumber}`);
-    return false;
-  }
-
-  // Прокручиваем к элементу
-  setTimeout(() => {
-    dayWrapper.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      inline: 'center'
-    });
-  }, 250);
-
-  return true;
-}
-
-const getVisibleElement = (selector) => {
-  const elements = document.querySelectorAll(selector);
-  let visibleElement;
-
-  for (let i = 0; i < elements.length; i++) {
-    const element = elements[i];
-    if (isElementInViewport(element)) {
-      if (!visibleElement) {
-        visibleElement = element;
+// Функция очистки кэша доступна глобально (можно вызвать из консоли)
+window.clearFitboxCache = () => {
+  try {
+    const keys = Object.keys(localStorage);
+    let count = 0;
+    keys.forEach(key => {
+      if (key.startsWith('fitbox_cache_')) {
+        localStorage.removeItem(key);
+        count++;
       }
-    }
+    });
+    console.log(`✓ Кэш очищен (удалено записей: ${count})`);
+    console.log('⟳ Обновите страницу для загрузки свежих данных');
+    return `Удалено ${count} записей из кэша`;
+  } catch (error) {
+    console.error('Ошибка при очистке кэша:', error);
+    return 'Ошибка при очистке кэша';
   }
-
-  return visibleElement;
-}
-
-const isElementInViewport = (element) => {
-  const rect = element.getBoundingClientRect();
-  return (
-    rect.top >= 0 &&
-    rect.left >= 0 &&
-    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-  );
-}
-
-const getMaxValue = (programs, key) => {
-  const allDishes = programs.flatMap(item => item.dishes);
-  const maxKeyValue = allDishes.reduce((max, dish) => dish[key] > max ? dish[key] : max, allDishes[0][key]);
-  return maxKeyValue;
-}
+};
 
 // ====================
 // API ФУНКЦИИ
 // ====================
 
-const apiFetch = async (endpoint) => {
+/**
+ * Получить все данные для меню
+ */
+const getMenuData = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Определяем поддомен из URL
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+    const subdomain = parts.length > 2 ? parts[0] : '';
+
+    // Формируем ключ кэша с учетом поддомена
+    const cacheKey = `menu_${subdomain}`;
+
+    // Проверяем кэш
+    const cachedData = getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    console.log('⟳ Загрузка данных меню с сервера...');
+
+    const response = await fetch(`${API_BASE_URL}/tilda/menu?subdomain=${subdomain}`, {
       method: 'GET',
       mode: 'cors',
       headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
     });
@@ -174,589 +72,846 @@ const apiFetch = async (endpoint) => {
     }
 
     const data = await response.json();
+
+    // Сохраняем в кэш
+    saveToCache(cacheKey, data);
+
     return data;
   } catch (error) {
-    console.error('Ошибка при запросе к API:', error);
+    console.error('Ошибка при получении данных меню:', error);
     throw error;
-  }
-}
-
-const getCities = async () => {
-  try {
-    const cities = await apiFetch('/cities');
-    return cities;
-  } catch (error) {
-    console.error('Ошибка при получении городов:', error);
-    return [];
-  }
-}
-
-const getPrograms = async () => {
-  try {
-    const programs = await apiFetch('/programs');
-    return programs;
-  } catch (error) {
-    console.error('Ошибка при получении программ питания:', error);
-    return [];
-  }
-}
-
-const getProgramWithPrices = async (programId) => {
-  try {
-    const program = await apiFetch(`/programs/${programId}/prices`);
-    return program;
-  } catch (error) {
-    console.error(`Ошибка при получении цен для программы ${programId}:`, error);
-    return null;
-  }
-}
-
-const getDishes = async (programId) => {
-  try {
-    const response = await apiFetch(`/tilda/menu/${programId}/dishes`);
-    return response.dishes || [];
-  } catch (error) {
-    console.error(`Ошибка при получении блюд для программы ${programId}:`, error);
-    return [];
-  }
-}
-
-const setPrograms = async () => {
-  try {
-    const programs = await getPrograms();
-    const transformedPrograms = await transformProgramsData(programs);
-    window.programs = transformedPrograms;
-
-    const firstProgram = window.programs.find(program => program.sort === 2);
-    _program = firstProgram || window.programs[0];
-    return transformedPrograms;
-  } catch (error) {
-    console.error(`Ошибка при составлении массива всех программ:`, error);
-    return [];
-  }
-}
-
-const setDishes = async (programId) => {
-  try {
-    const dishes = await getDishes(programId);
-    const transformedDishes = await transformDishesData(dishes);
-    return transformedDishes;
-  } catch (error) {
-    console.error(`Ошибка при составлении данных блюд для программы ${programId}:`, error);
-    return [];
-  }
-}
-
-// ====================
-// ТРАНСФОРМАЦИЯ ДАННЫХ
-// ====================
-
-const transformProgramsData = async (programs) => {
-  const result = [];
-
-  // Получаем город для определения даты старта
-  const cities = await getCities();
-  const currentCity = getCityNameBySubdomain();
-  const cityData = cities.find(city => city.title === currentCity);
-
-  for (const program of programs) {
-    // Получаем полную информацию с ценами
-    const programWithPrices = await getProgramWithPrices(program.id);
-
-    // Формируем описание калорийности
-    const caloriesText = programWithPrices.data?.calories_from && programWithPrices.data?.calories_to
-      ? `${programWithPrices.data.calories_from}-${programWithPrices.data.calories_to}`
-      : '';
-
-    // Формируем БЖУ
-    const bjuText = programWithPrices.data?.proteins && programWithPrices.data?.fats && programWithPrices.data?.carbohydrates
-      ? `${programWithPrices.data.proteins}/${programWithPrices.data.fats}/${programWithPrices.data.carbohydrates} б/ж/у`
-      : '';
-
-    // Определяем количество блюд в день (берем из первой цены или дефолтное значение)
-    const dishesCount = getDishesCountByProgram(program.title);
-
-    const transformedProgram = {
-      id: programWithPrices.id,
-      name: programWithPrices.title,
-      info: {
-        emoji: programWithPrices.emoji || '',
-        slogan: getProgramSlogan(programWithPrices.title),
-        calories: caloriesText,
-        text: getProgramDescription(programWithPrices.title),
-        bju: bjuText,
-        count: dishesCount
-      },
-      sort: programWithPrices.sort,
-      prices: transformPrices(programWithPrices.prices || []),
-      start: cityData?.started_at || programWithPrices.cities?.[0]?.started_at || new Date().toISOString(),
-    };
-
-    result.push(transformedProgram);
-  }
-
-  return result.sort((a, b) => a.sort - b.sort);
-}
-
-const transformPrices = (prices) => {
-  return prices.map(price => ({
-    amount: {
-      current: parseFloat(price.price),
-      old: price.old_price ? parseFloat(price.old_price) : null,
-    },
-    days: price.days,
-    text: price.days === 1 ? 'Пробный день' : `${price.days} дней`
-  }));
-}
-
-const transformDishesData = (dishes) => {
-  return dishes.map(dish => {
-    // API возвращает уже готовый URL изображения или null
-    const imageUrl = dish.image || '';
-    const caloriesText = dish.calories ? `${dish.calories} ккал` : '';
-
-    return {
-      'id': dish.id,
-      'image': imageUrl,
-      'name': dish.title || '',
-      'ingredients': dish.ingredientsText || 'Нет информации',
-      'calories': caloriesText,
-      'week': dish.weekNumber || 1,
-      'day': dish.dayOfWeek || 1,
-      'number': dish.dishNumber || 1,
-    };
-  });
-}
-
-// ====================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ====================
-
-const getProgramSlogan = (programName) => {
-  const slogans = {
-    'Офис': 'Кушай на работе',
-    'Баланс': 'Баланс во всём',
-    'Фитнес': 'Будь в форме',
-    'Классик мини': 'Оптимальный выбор',
-    'Классик': 'Классика вкуса',
-    'Классик +': 'Максимум энергии'
-  };
-  return slogans[programName] || '';
-}
-
-const getProgramDescription = (programName) => {
-  const descriptions = {
-    'Офис': 'Трехразовое питание на 800-900 ккал/день разнообразит ваш привычный рацион и поможет избежать ежедневных вопросов «что бы сегодня поесть?»',
-    'Баланс': 'Сбалансированное питание для поддержания веса и хорошего самочувствия',
-    'Фитнес': 'Идеально подходит для тех, кто ведет активный образ жизни и следит за фигурой',
-    'Классик мини': 'Полноценное питание с оптимальной калорийностью',
-    'Классик': 'Классическое пятиразовое питание для поддержания активности в течение дня',
-    'Классик +': 'Усиленное питание для людей с высокими энергетическими затратами'
-  };
-  return descriptions[programName] || '';
-}
-
-const getDishesCountByProgram = (programName) => {
-  const counts = {
-    'Офис': 3,
-    'Баланс': 4,
-    'Фитнес': 4,
-    'Классик мини': 4,
-    'Классик': 5,
-    'Классик +': 6
-  };
-  return counts[programName] || 3;
-}
-
-const getCityNameBySubdomain = (subdomain = null) => {
-  // Если субдомен не передан, извлекаем его из window.location
-  if (subdomain === null) {
-    if (typeof window === 'undefined') {
-      console.warn('window.location недоступен в этой среде');
-      return CITY.ULYANOVSK; // По умолчанию возвращаем Ульяновск
-    }
-
-    const hostname = window.location.hostname;
-    // Извлекаем поддомен (первая часть до первой точки)
-    const parts = hostname.split('.');
-    subdomain = parts.length > 2 ? parts[0] : '';
-  }
-
-  // Находим город по поддомену
-  const cityName = Object.keys(CITIES).find(city =>
-    CITIES[city].subdomain === subdomain
-  );
-
-  return cityName || CITY.ULYANOVSK;
-}
-
-const targetActivate = (program) => {
-  const targetBtns = blockTarget.querySelectorAll('.target-button');
-  targetBtns.forEach(btn => btn.classList.remove('active'));
-  setTimeout(() => {
-    const currentButton = blockTarget.querySelector(`.target-button[data-program-id="${program.id}"]`);
-    currentButton && currentButton.classList.add('active');
-    setSummary();
-  });
-}
-
-const swiperGoTo = (program) => {
-  const index = program.sort - 1;
-  swiperProgramm.slideToLoop(index);
-}
-
-const programBtnActivate = (program) => {
-  const programBtns = blockMenu.querySelectorAll('.menu-button.program');
-  programBtns.forEach(btn => btn.classList.remove('active'));
-  setTimeout(() => {
-    const currentButton = blockMenu.querySelector(`.menu-button.program[data-program-id="${program.id}"]`);
-    currentButton && currentButton.classList.add('active');
-    setSummary();
-  });
-}
-
-const getProgramById = (id) => {
-  const program = window.programs.find(program => program.id === parseInt(id));
-  return program;
-}
-
-const getCurrentProgramId = () => {
-  const labelProgram = document.querySelector('.menu-button.program.active');
-  if (labelProgram) {
-    const programId = labelProgram.getAttribute('data-program-id');
-    return programId;
-  }
-  return null;
-}
-
-const getProgramWrapper = () => {
-  const currentProgramWrapper = document.getElementById(window.program.id);
-  return currentProgramWrapper;
-}
-
-const getWeekNumber = () => {
-  const currentWeek = document.querySelector('select[name="week"]');
-  if (!!currentWeek) {
-    return currentWeek.value;
-  }
-  return false;
-}
-
-const getDaysPrices = () => {
-  const programId = getCurrentProgramId();
-  const currentDaysValue = getDaysCount();
-  if (programId && currentDaysValue) {
-    const currentProgram = getProgramById(programId);
-    const currentDaysPrices = currentProgram.prices.find(obj => obj.days === parseInt(currentDaysValue, 10));
-    if (currentDaysPrices && currentDaysPrices.amount && currentDaysPrices.amount.current) {
-      return currentDaysPrices.amount;
-    }
-    return false;
-  }
-  return false;
-}
-
-const getDaysCount = () => {
-  const currentDaysLabel = getDaysBtn();
-  if (!!currentDaysLabel) {
-    return currentDaysLabel.getAttribute('data-days-count');
-  }
-  return false;
-}
-
-const getDaysBtn = () => {
-  const currentDaysInput = document.querySelector('input[name="days"]:checked');
-  if (!!currentDaysInput) {
-    return currentDaysInput.parentNode;
-  }
-  return false;
-}
-
-const triggerActiveRadioEvent = () => {
-  const activeRadio = document.querySelector('input[name="days"]:checked');
-
-  if (activeRadio) {
-    const changeEvent = new Event('change', { bubbles: true });
-    activeRadio.dispatchEvent(changeEvent);
-    return true;
-  }
-
-  console.warn('Активный radio не найден');
-  return false;
-}
-
-const targetBtnsCallback = (e) => {
-  const btn = e.target.classList.contains('target-button') ? e.target : e.target.closest('.target-button');
-  if (!btn.classList.contains('active')) {
-    const programId = btn.getAttribute('data-program-id');
-    const program = getProgramById(programId);
-    window.program = program;
-    triggerActiveRadioEvent();
-  }
-}
-
-const targetBtnsListen = (boolean = true) => {
-  const targetBtns = document.querySelectorAll('.target-button');
-  if (boolean) {
-    targetBtns.forEach(btn => {
-      btn.removeAttribute('disabled');
-      btn.removeEventListener('click', targetBtnsCallback);
-      btn.addEventListener('click', targetBtnsCallback);
-    });
-  } else {
-    targetBtns.forEach(btn => {
-      btn.setAttribute('disabled', true);
-      btn.removeEventListener('click', targetBtnsCallback)
-    });
-  }
-}
-
-const programBtnsCallback = (e) => {
-  const btn = e.target.closest('label');
-  if (!btn.classList.contains('active')) {
-    const programId = btn.getAttribute('data-program-id');
-    const program = getProgramById(programId);
-    window.program = program;
-    triggerActiveRadioEvent();
-  }
-}
-
-const programBtnsListen = (boolean = true) => {
-  const programBtns = document.querySelectorAll('.menu-button.program');
-  if (boolean) {
-    programBtns.forEach(btn => {
-      btn.removeAttribute('disabled');
-      btn.removeEventListener('click', programBtnsCallback);
-      btn.addEventListener('click', programBtnsCallback);
-    });
-  } else {
-    programBtns.forEach(btn => {
-      btn.setAttribute('disabled', true);
-      btn.removeEventListener('click', programBtnsCallback)
-    });
-  }
-}
-
-const selectCallback = (e) => {
-  const value = e.target.value;
-  const currentProgramWrapper = getProgramWrapper();
-  scrollToElement(currentProgramWrapper);
-  const weeks = currentProgramWrapper.querySelectorAll('.week-wrapper');
-  weeks.forEach(week => week.classList.add('hidden'));
-  const newActiveWeek = Array.from(weeks).find(week => week.getAttribute('data-week-number') == value);
-  if (newActiveWeek) {
-    newActiveWeek.classList.remove('hidden');
-  }
-}
-
-const weekNumberToggle = (boolean = true) => {
-  const select = document.querySelector('select[name="week"]');
-  if (boolean) {
-    select.removeAttribute('disabled');
-    select.removeEventListener('change', selectCallback);
-    select.addEventListener('change', selectCallback);
-  } else {
-    select.setAttribute('disabled', true);
-    select.removeEventListener('change', selectCallback);
-  }
-}
-
-const setWeekNumber = (currentWeek = 1) => {
-  const select = document.querySelector('select[name="week"]');
-  select.value = currentWeek;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
-}
-
-const addRubleSymbol = (text = '') => {
-  return [text, '₽'].filter(Boolean).join(' ');
-}
-
-const daysBtnsCallback = (e) => {
-  const btn = e.target || e.target.closest('label');
-  const daysBtns = document.querySelectorAll('.menu-button.days');
-  daysBtns.forEach(btn => btn.classList.remove('active'));
-  setTimeout(() => {
-    const summaryAmountWrapper = document.querySelector('.program-amount-wrapper');
-    const amountCurrent = summaryAmountWrapper.querySelector('.program-amount.current');
-    const amountOld = summaryAmountWrapper.querySelector('.program-amount.old');
-    const amountDiscount = summaryAmountWrapper.querySelector('.program-amount.discount');
-    const amountDayPrice = summaryAmountWrapper.querySelector('.program-amount.day-price');
-
-    const currentDaysPrices = getDaysPrices();
-    const daysCount = getDaysCount();
-    const dayPrice = Math.ceil(currentDaysPrices.current / parseInt(daysCount, 10));
-
-    amountCurrent.innerHTML = addRubleSymbol(currentDaysPrices.current);
-    amountDayPrice.innerHTML = addRubleSymbol(dayPrice) + ' в день';
-
-    if (currentDaysPrices.old) {
-      summaryAmountWrapper.classList.add('has-discount');
-      amountOld.innerHTML = addRubleSymbol(currentDaysPrices.old);
-      amountDiscount.innerHTML = addRubleSymbol(currentDaysPrices.current - currentDaysPrices.old);
-      amountOld.style.display = '';
-      amountDiscount.style.display = '';
-    } else {
-      summaryAmountWrapper.classList.remove('has-discount');
-      amountOld.innerHTML = '';
-      amountDiscount.innerHTML = '';
-      amountOld.style.display = 'none';
-      amountDiscount.style.display = 'none';
-    }
-    btn.classList.add('active');
-  });
-}
-
-const daysBtnsListen = (boolean = true) => {
-  const daysBtns = document.querySelectorAll('.menu-button.days');
-  if (boolean) {
-    daysBtns.forEach(btn => {
-      btn.removeAttribute('disabled');
-      btn.removeEventListener('click', daysBtnsCallback);
-      btn.addEventListener('click', daysBtnsCallback);
-    });
-  } else {
-    daysBtns.forEach(btn => {
-      btn.setAttribute('disabled', true);
-      btn.removeEventListener('click', daysBtnsCallback)
-    });
-  }
-}
-
-const summaryCartBtnCallback = async () => {
-  summaryCartBtnListen(false);
-  const productName = window.program.name;
-  const currentDaysPrices = getDaysPrices();
-  const productPrice = currentDaysPrices.current;
-  const productId = window.program.id;
-  const productOptions = [{ 'option': 'Кол-во дней', 'variant': getDaysCount() }, { 'option': 'Калории', 'variant': window.program.info.calories }];
-  const product = {
-    img: '',
-    lid: '',
-    name: productName,
-    options: productOptions,
-    pack_label: '',
-    pack_m: '',
-    pack_x: '',
-    pack_y: '',
-    pack_z: '',
-    price: productPrice,
-    quantity: 1,
-    recid: '',
-    sku: productId,
-    url: ''
-  }
-  const selector = window.innerWidth > 960 ? '.summary-program-logo' : '.swiper-slide-active .menu-program-logo';
-  try {
-    const productImage = await createImageFrom(selector);
-    product.img = productImage;
-    tcart__addProduct(product);
-  } catch (error) {
-    console.error(error);
-    tcart__addProduct(product);
-  } finally {
-    summaryCartBtnListen(true);
   }
 };
 
-const summaryCartBtnListen = (boolean = true) => {
-  const summaryCartBtn = blockMenu.querySelector('.menu-button.summary-button[name="cart"]');
-  if (boolean) {
-    summaryCartBtn.removeAttribute('disabled');
-    summaryCartBtn.removeEventListener('click', summaryCartBtnCallback);
-    summaryCartBtn.addEventListener('click', summaryCartBtnCallback);
-  } else {
-    summaryCartBtn.setAttribute('disabled', true);
-    summaryCartBtn.removeEventListener('click', summaryCartBtnCallback);
-  }
-}
+/**
+ * Получить блюда для программы
+ */
+const getProgramDishes = async (programId, week = null, day = null) => {
+  try {
+    // Формируем ключ кэша с учетом параметров
+    const cacheKey = `dishes_${programId}_${week || 'all'}_${day || 'all'}`;
 
-const setActiveProgram = () => {
-  const programWrappers = blockMenu.querySelectorAll('.program-wrapper');
-  programWrappers.forEach(programWrapper => programWrapper.classList.add('hidden'));
-  const weeks = blockMenu.querySelectorAll('.week-wrapper');
-  weeks.forEach(week => week.classList.add('hidden'));
-  setTimeout(() => {
-    const newActiveProgram = getProgramWrapper();
-    const newActiveWeekNumber = getWeekNumber();
-    const newActiveWeek = newActiveProgram.querySelector(`.week-wrapper[data-week-number="${newActiveWeekNumber}"]`);
-    newActiveWeek && newActiveWeek.classList.remove('hidden');
-    newActiveProgram && newActiveProgram.classList.remove('hidden');
-  });
-}
+    // Проверяем кэш
+    const cachedData = getFromCache(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
 
-const setSummary = () => {
-  setActiveProgram();
+    console.log(`⟳ Загрузка блюд программы ${programId} с сервера...`);
 
-  const summaryEmoji = blockMenu.querySelectorAll('.program-logo-emoji');
-  const summarySlogan = blockMenu.querySelectorAll('.program-logo-text');
-  const summaryTitle = document.querySelectorAll('.program-title-text');
-  const summaryCalories = blockMenu.querySelectorAll('.program-title-descr.calories');
-  const summaryBju = blockMenu.querySelectorAll('.program-title-descr.bju');
-  const summaryCount = blockMenu.querySelectorAll('.program-title-descr.count span');
-  const summaryText = document.querySelectorAll('.program-content-text.text');
-  const summaryDaysBtns = blockMenu.querySelectorAll('input[name="days"]');
+    let url = `${API_BASE_URL}/tilda/menu/${programId}/dishes`;
+    const params = new URLSearchParams();
+    if (week) params.append('week', week);
+    if (day) params.append('day', day);
 
-  const program = window.programs.find(program => program.name === window.program.name);
-  if (!!program) {
-    summaryEmoji.forEach(el => el.innerHTML = program.info?.emoji || '');
-    summarySlogan.forEach(el => el.innerHTML = program.info?.slogan || '');
-    summaryTitle.forEach(el => {
-      el.innerHTML = program.name || '';
-      el.setAttribute('data-program-id', program.id);
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json',
+      },
     });
-    summaryCalories.forEach(el => el.innerHTML = program.info?.calories ? program.info?.calories : '');
-    summaryText.forEach(el => el.innerHTML = program.info?.text ? program.info?.text : '');
-    summaryBju.forEach(el => el.innerHTML = program.info?.bju ? program.info?.bju : 'Нет информации');
-    summaryCount.forEach(el => el.innerHTML = program.info?.count ? program.info?.count : '');
 
-    program.prices.forEach((price, i) => {
-      if (summaryDaysBtns[i] && price.days == summaryDaysBtns[i].closest('label').getAttribute('data-days-count')) {
-        summaryDaysBtns[i].setAttribute('value', price.amount.current);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Сохраняем в кэш
+    saveToCache(cacheKey, data);
+
+    return data;
+  } catch (error) {
+    console.error(`Ошибка при получении блюд программы ${programId}:`, error);
+    return { dishes: [] };
+  }
+};
+
+// ====================
+// УТИЛИТЫ
+// ====================
+
+/**
+ * Константы для кэширования
+ */
+const CACHE_TTL = 60 * 60 * 1000; // 60 минут в миллисекундах
+const CACHE_PREFIX = 'fitbox_cache_';
+
+/**
+ * Получить данные из localStorage кэша
+ */
+const getFromCache = (key) => {
+  try {
+    const cached = localStorage.getItem(CACHE_PREFIX + key);
+    if (!cached) return null;
+
+    const data = JSON.parse(cached);
+    const now = Date.now();
+
+    // Проверяем, не истек ли срок действия кэша
+    if (now - data.timestamp > CACHE_TTL) {
+      localStorage.removeItem(CACHE_PREFIX + key);
+      return null;
+    }
+
+    console.log(`✓ Данные загружены из кэша: ${key}`);
+    return data.value;
+  } catch (error) {
+    console.error('Ошибка при чтении кэша:', error);
+    return null;
+  }
+};
+
+/**
+ * Сохранить данные в localStorage кэш
+ */
+const saveToCache = (key, value) => {
+  try {
+    const data = {
+      value: value,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data));
+    console.log(`✓ Данные сохранены в кэш: ${key} (TTL: 60 мин)`);
+  } catch (error) {
+    console.error('Ошибка при сохранении в кэш:', error);
+  }
+};
+
+/**
+ * Очистить весь кэш Fitbox
+ */
+const clearCache = () => {
+  try {
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith(CACHE_PREFIX)) {
+        localStorage.removeItem(key);
       }
     });
-    daysBtnsListen();
-    summaryCartBtnListen();
-
-    const currentDaysPrices = getDaysPrices();
-    const currentPrice = currentDaysPrices.current ? currentDaysPrices.current : summaryDaysBtns[0].value;
-    const currentDaysBtn = getDaysBtn() ? getDaysBtn() : Array.from(summaryDaysBtns).find(btn => btn.value == currentPrice);
-    currentDaysBtn && currentDaysBtn.click();
+    console.log('✓ Кэш очищен');
+  } catch (error) {
+    console.error('Ошибка при очистке кэша:', error);
   }
-}
+};
 
-const getDiffDaysInCycle = (startDate) => {
+/**
+ * Инициализация Intersection Observer для lazy loading изображений
+ */
+const initImageObserver = () => {
+  // Проверяем поддержку браузером
+  if (!('IntersectionObserver' in window)) {
+    console.warn('IntersectionObserver не поддерживается, изображения загружаются сразу');
+    return null;
+  }
+
+  // Создаем observer с порогом 0.01 (начинаем загрузку когда элемент на 1% виден)
+  const observer = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const imageElement = entry.target;
+        const imageUrl = imageElement.getAttribute('data-lazy-bg');
+
+        if (imageUrl) {
+          // Загружаем изображение
+          imageElement.style.backgroundImage = `url(${imageUrl})`;
+          imageElement.classList.add('lazy-loaded');
+
+          // Удаляем data-атрибут
+          imageElement.removeAttribute('data-lazy-bg');
+
+          // Прекращаем наблюдение за этим элементом
+          observer.unobserve(imageElement);
+        }
+      }
+    });
+  }, {
+    rootMargin: '50px', // Начинаем загрузку за 50px до появления в viewport
+    threshold: 0.01
+  });
+
+  return observer;
+};
+
+/**
+ * Вычислить текущую неделю в цикле
+ * День начинается в 00:00 (точность до дня)
+ */
+const getCurrentWeekInCycle = (startDate) => {
+  // Создаем даты с обнуленным временем (начало дня 00:00:00)
   const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const diffTime = today.getTime() - start.getTime();
 
-  if (diffTime < 0) {
-    return 1;
-  }
+  if (diffTime < 0) return 1;
 
+  // Количество полных дней с момента старта
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-  return diffDays;
-}
+  // Номер недели в цикле (1-4)
+  const weekInCycle = (Math.floor(diffDays / 7) % 4) + 1;
 
-const getCurrentWeekInCycle = (startDate) => {
-  const diffDays = getDiffDaysInCycle(startDate);
-  const weekInCycle = Math.floor(diffDays / 7) % 4 + 1;
   return weekInCycle;
-}
+};
 
+/**
+ * Вычислить текущий день в цикле
+ * День начинается в 00:00 (точность до дня)
+ */
 const getCurrentDayInCycle = (startDate) => {
-  const diffDays = getDiffDaysInCycle(startDate);
+  // Создаем даты с обнуленным временем (начало дня 00:00:00)
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = today.getTime() - start.getTime();
+
+  if (diffTime < 0) return 1;
+
+  // Количество полных дней с момента старта
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  // День недели (1-7)
   const dayInCycle = (diffDays % 7) + 1;
+
   return dayInCycle;
-}
+};
 
-const getDateText = (date = null) => {
-  let currentDate = date;
+/**
+ * Форматировать дату
+ */
+const formatDate = (date) => {
+  const d = new Date(date);
+  const months = [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+  ];
 
-  if (!currentDate) {
-    currentDate = new Date();
+  const day = d.getDate();
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+
+  return `${day} ${month} ${year} года`;
+};
+
+/**
+ * Добавить символ рубля
+ */
+const addRubleSymbol = (amount) => {
+  return `${amount} ₽`;
+};
+
+// ====================
+// РЕНДЕРИНГ UI
+// ====================
+
+/**
+ * Отрендерить кнопки выбора программы
+ */
+const renderProgramButtons = (programs) => {
+  const wrapper = document.querySelector('.program-buttons-wrapper');
+  if (!wrapper) return;
+
+  // Очищаем существующие кнопки
+  wrapper.innerHTML = '';
+
+  programs.forEach(program => {
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'program';
+    input.id = `program-${program.sort}`;
+    input.value = program.title;
+    input.hidden = true;
+
+    const span = document.createElement('span');
+    span.textContent = program.title;
+
+    const label = document.createElement('label');
+    label.classList.add('menu-button', 'program');
+    label.setAttribute('for', `program-${program.sort}`);
+    label.setAttribute('data-program-id', program.id);
+    label.appendChild(input);
+    label.appendChild(span);
+
+    // Добавляем обработчик клика
+    label.addEventListener('click', () => {
+      setActiveProgram(program);
+    });
+
+    wrapper.appendChild(label);
+  });
+};
+
+/**
+ * Отрендерить кнопки целей
+ */
+const renderTargetButtons = (programs) => {
+  const wrapper = blockTarget?.querySelector('.target-buttons-wrapper');
+  if (!wrapper) return;
+
+  // Очищаем существующие кнопки
+  wrapper.innerHTML = '';
+
+  programs.forEach(program => {
+    const button = document.createElement('div');
+    button.classList.add('target-button');
+    button.setAttribute('data-program-id', program.id);
+
+    const emoji = document.createElement('span');
+    emoji.classList.add('target-button-emoji');
+    emoji.textContent = program.emoji;
+
+    const text = document.createElement('span');
+    text.classList.add('target-button-text');
+    text.textContent = program.slogan;
+
+    button.appendChild(emoji);
+    button.appendChild(text);
+
+    // Добавляем обработчик клика
+    button.addEventListener('click', () => {
+      setActiveProgram(program);
+    });
+
+    wrapper.appendChild(button);
+  });
+};
+
+/**
+ * Отрендерить слайдер программ
+ */
+const renderProgramSlider = (programs) => {
+  const swiperWrapper = document.querySelector('.swiper-programm .swiper-wrapper');
+  if (!swiperWrapper) return;
+
+  // Очищаем существующие слайды
+  swiperWrapper.innerHTML = '';
+
+  programs.forEach(program => {
+    const slide = document.createElement('div');
+    slide.classList.add('swiper-slide');
+
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('program-info-wrapper');
+    wrapper.setAttribute('data-type', 'slider');
+    wrapper.setAttribute('data-program-id', program.id);
+
+    const logo = document.createElement('div');
+    logo.classList.add('program-logo', 'menu-program-logo');
+    logo.innerHTML = `
+      <span class="program-logo-emoji">${program.emoji}</span>
+      <span class="program-logo-text">${program.slogan}</span>
+    `;
+
+    const title = document.createElement('h2');
+    title.classList.add('program-title-text');
+    title.textContent = program.title;
+
+    const text = document.createElement('div');
+    text.classList.add('program-content-text');
+    text.textContent = program.description;
+
+    const button = document.createElement('a');
+    button.classList.add('menu-button', 'summary-button');
+    button.setAttribute('href', '#popup:calc');
+    button.textContent = 'Калькулятор калорий';
+
+    wrapper.appendChild(logo);
+    wrapper.appendChild(title);
+    wrapper.appendChild(text);
+    wrapper.appendChild(button);
+    slide.appendChild(wrapper);
+    swiperWrapper.appendChild(slide);
+  });
+
+  // Инициализируем Swiper
+  if (typeof Swiper !== 'undefined') {
+    swiperProgramm = new Swiper('.swiper-programm', {
+      autoplay: false,
+      loop: true,
+      navigation: {
+        nextEl: '.swiper-button-next',
+        prevEl: '.swiper-button-prev',
+      },
+      slidesPerView: 1,
+      on: {
+        slideChange: function () {
+          // Используем флаг, чтобы избежать циклических вызовов
+          if (this.params.programmaticSlide) {
+            this.params.programmaticSlide = false;
+            return;
+          }
+
+          setTimeout(() => {
+            const activeSlide = this.slides[this.activeIndex];
+            const programId = activeSlide.querySelector('.program-info-wrapper')?.getAttribute('data-program-id');
+            if (programId) {
+              const program = window.menuData.programs.find(p => p.id === parseInt(programId));
+              if (program && window.currentProgram?.id !== program.id) {
+                setActiveProgram(program);
+              }
+            }
+          }, 20);
+        }
+      }
+    });
   }
+};
+
+/**
+ * Обновить информацию о программе в summary блоке
+ */
+const updateProgramSummary = (program) => {
+  if (!program) return;
+
+  // Обновляем лого и название
+  document.querySelectorAll('.program-logo-emoji').forEach(el => {
+    el.textContent = program.emoji;
+  });
+
+  document.querySelectorAll('.program-logo-text').forEach(el => {
+    el.textContent = program.slogan;
+  });
+
+  document.querySelectorAll('.program-title-text').forEach(el => {
+    el.textContent = program.title;
+    el.setAttribute('data-program-id', program.id);
+  });
+
+  // Обновляем характеристики
+  const caloriesText = program.nutrition.caloriesFrom && program.nutrition.caloriesTo
+    ? `${program.nutrition.caloriesFrom}-${program.nutrition.caloriesTo}`
+    : '';
+
+  document.querySelectorAll('.program-title-descr.calories').forEach(el => {
+    el.textContent = caloriesText;
+  });
+
+  const bjuText = program.nutrition.proteins && program.nutrition.fats && program.nutrition.carbohydrates
+    ? `${program.nutrition.proteins}/${program.nutrition.fats}/${program.nutrition.carbohydrates} б/ж/у`
+    : '';
+
+  document.querySelectorAll('.program-title-descr.bju').forEach(el => {
+    el.textContent = bjuText;
+  });
+
+  document.querySelectorAll('.program-title-descr.count span').forEach(el => {
+    el.textContent = program.dishesPerDay;
+  });
+
+  document.querySelectorAll('.program-content-text.text').forEach(el => {
+    el.textContent = program.description;
+  });
+
+  // Обновляем кнопки дней и цены
+  renderDaysButtons(program);
+};
+
+/**
+ * Отрендерить кнопки выбора количества дней
+ */
+const renderDaysButtons = (program) => {
+  const daysForm = document.querySelector('.program-days-form');
+  if (!daysForm) return;
+
+  // Очищаем существующие кнопки
+  daysForm.innerHTML = '';
+
+  // Пытаемся найти сохраненный выбор в текущей программе
+  let selectedPrice = null;
+  if (window.selectedDays) {
+    selectedPrice = program.prices.find(p => p.days === window.selectedDays);
+  }
+  // Если не нашли или не было выбора, берем первый
+  if (!selectedPrice && program.prices.length > 0) {
+    selectedPrice = program.prices[0];
+  }
+
+  program.prices.forEach((price, index) => {
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'days';
+    input.id = `days-${index + 1}`;
+    input.value = price.price;
+    input.hidden = true;
+
+    const label = document.createElement('label');
+    label.classList.add('menu-button', 'days');
+    label.setAttribute('for', `days-${index + 1}`);
+    label.setAttribute('data-days-count', price.days);
+    label.textContent = price.label;
+    label.appendChild(input);
+
+    // Обработчик клика
+    label.addEventListener('click', () => {
+      // Сохраняем выбранное количество дней
+      window.selectedDays = price.days;
+      updatePriceSummary(price);
+      document.querySelectorAll('.menu-button.days').forEach(btn => btn.classList.remove('active'));
+      label.classList.add('active');
+    });
+
+    daysForm.appendChild(label);
+
+    // Выбираем сохраненную или первую опцию
+    if (selectedPrice && price.days === selectedPrice.days) {
+      input.checked = true;
+      label.classList.add('active');
+      updatePriceSummary(price);
+      window.selectedDays = price.days;
+    }
+  });
+};
+
+/**
+ * Обновить информацию о цене
+ */
+const updatePriceSummary = (price) => {
+  const wrapper = document.querySelector('.program-amount-wrapper');
+  if (!wrapper) return;
+
+  const currentEl = wrapper.querySelector('.program-amount.current');
+  const oldEl = wrapper.querySelector('.program-amount.old');
+  const discountEl = wrapper.querySelector('.program-amount.discount');
+  const dayPriceEl = wrapper.querySelector('.program-amount.day-price');
+
+  if (currentEl) currentEl.textContent = addRubleSymbol(price.price);
+  if (dayPriceEl) dayPriceEl.textContent = addRubleSymbol(price.pricePerDay) + ' в день';
+
+  if (price.oldPrice) {
+    wrapper.classList.add('has-discount');
+    if (oldEl) {
+      oldEl.textContent = addRubleSymbol(price.oldPrice);
+      oldEl.style.display = '';
+    }
+    if (discountEl) {
+      discountEl.textContent = addRubleSymbol(price.price - price.oldPrice);
+      discountEl.style.display = '';
+    }
+  } else {
+    wrapper.classList.remove('has-discount');
+    if (oldEl) oldEl.style.display = 'none';
+    if (discountEl) discountEl.style.display = 'none';
+  }
+};
+
+/**
+ * Установить активную программу
+ */
+const setActiveProgram = (program) => {
+  if (!program) return;
+
+  window.currentProgram = program;
+
+  // Обновляем активные классы кнопок программ
+  document.querySelectorAll('.menu-button.program').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('data-program-id') == program.id) {
+      btn.classList.add('active');
+    }
+  });
+
+  // Обновляем активные классы кнопок целей
+  document.querySelectorAll('.target-button').forEach(btn => {
+    btn.classList.remove('active');
+    if (btn.getAttribute('data-program-id') == program.id) {
+      btn.classList.add('active');
+    }
+  });
+
+  // Обновляем summary блок
+  updateProgramSummary(program);
+
+  // Переключаем слайдер (если он уже не на нужном слайде)
+  if (swiperProgramm) {
+    const index = program.sort - 1;
+    const currentRealIndex = swiperProgramm.realIndex;
+
+    if (currentRealIndex !== index) {
+      // Устанавливаем флаг, чтобы slideChange не вызывал setActiveProgram
+      swiperProgramm.params.programmaticSlide = true;
+      swiperProgramm.slideToLoop(index);
+    }
+  }
+
+  // Загружаем блюда для выбранной программы
+  const select = document.querySelector('select[name="week"]');
+  const currentWeek = select ? parseInt(select.value) : null;
+  loadAndRenderDishes(program.id, currentWeek);
+};
+
+/**
+ * Переключить отображаемую неделю
+ */
+const switchWeek = (weekNumber) => {
+  const programWrapper = document.querySelector('.program-wrapper');
+  if (!programWrapper) return;
+
+  // Скрываем все недели
+  const allWeeks = programWrapper.querySelectorAll('.week-wrapper');
+  allWeeks.forEach(week => week.classList.add('hidden'));
+
+  // Показываем выбранную неделю
+  const selectedWeek = programWrapper.querySelector(`.week-wrapper[data-week-number="${weekNumber}"]`);
+  if (selectedWeek) {
+    selectedWeek.classList.remove('hidden');
+  }
+};
+
+/**
+ * Отрендерить селект недель
+ */
+const renderWeekSelect = () => {
+  const select = document.querySelector('select[name="week"]');
+  if (!select) return;
+
+  // Включаем селект, если он был disabled
+  select.disabled = false;
+
+  select.innerHTML = '';
+
+  // Определяем текущую неделю
+  const currentWeek = window.menuData && window.menuData.currentCity
+    ? getCurrentWeekInCycle(window.menuData.currentCity.startedAt)
+    : 1;
+
+  for (let i = 1; i <= 4; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = `${i} неделя`;
+    if (i === currentWeek) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  }
+
+  // Удаляем старые обработчики перед добавлением нового
+  const newSelect = select.cloneNode(true);
+  select.parentNode.replaceChild(newSelect, select);
+
+  // Добавляем обработчик изменения недели
+  newSelect.addEventListener('change', (e) => {
+    const weekNumber = parseInt(e.target.value);
+    switchWeek(weekNumber);
+  });
+};
+
+/**
+ * Отрендерить карточку блюда
+ */
+const renderDishCard = (dish) => {
+  const card = document.createElement('div');
+  card.classList.add('dish-card');
+  card.id = `dish-${dish.id}`;
+  card.style.cursor = 'pointer';
+
+  const image = document.createElement('div');
+  image.classList.add('dish-card-image');
+
+  // Lazy loading для изображений
+  if (dish.image) {
+    if (imageObserver) {
+      // Используем lazy loading через Intersection Observer
+      image.setAttribute('data-lazy-bg', dish.image);
+      imageObserver.observe(image);
+    } else {
+      // Fallback: загружаем сразу если Observer не поддерживается
+      image.style.backgroundImage = `url(${dish.image})`;
+    }
+  }
+
+  const content = document.createElement('div');
+  content.classList.add('dish-card-content');
+
+  const name = document.createElement('h5');
+  name.classList.add('dish-card-name');
+  name.textContent = dish.title;
+
+  const ingredients = document.createElement('div');
+  ingredients.classList.add('dish-card-ingredients');
+  // Выводим массив ингредиентов через запятую (без количества)
+  if (dish.ingredients && dish.ingredients.length > 0) {
+    ingredients.textContent = dish.ingredients.join(', ');
+  } else {
+    ingredients.textContent = 'Нет информации об ингредиентах';
+  }
+
+  const nutrition = document.createElement('div');
+  nutrition.classList.add('dish-card-nutrition');
+
+  if (dish.nutrition && dish.nutrition.calories > 0) {
+    const nutritionText = `на 100 г: ${dish.nutrition.calories} ккал, ${dish.nutrition.proteins}/${dish.nutrition.fats}/${dish.nutrition.carbohydrates} б/ж/у`;
+    nutrition.textContent = nutritionText;
+  } else {
+    nutrition.textContent = 'Нет данных о питательности';
+  }
+
+  content.appendChild(name);
+  content.appendChild(ingredients);
+  content.appendChild(nutrition);
+
+  card.appendChild(image);
+  card.appendChild(content);
+
+  // Делаем всю карточку кликабельной
+  card.addEventListener('click', () => {
+    showDishModal(dish);
+  });
+
+  return card;
+};
+
+/**
+ * Показать модальное окно с составом блюда
+ */
+const showDishModal = (dish) => {
+  // Проверяем, есть ли уже dialog, если есть - удаляем
+  const existingDialog = document.querySelector('#dish-dialog ');
+  if (existingDialog) {
+    existingDialog.remove();
+  }
+
+  // Создаем элемент dialog
+  const dialog = document.createElement('dialog');
+  dialog.id = 'dish-dialog';
+
+  const closeButton = document.createElement('button');
+  closeButton.classList.add('dish-dialog-close');
+  closeButton.innerHTML = '&times;';
+  closeButton.addEventListener('click', () => {
+    dialog.close();
+    dialog.remove();
+  });
+
+  const title = document.createElement('h3');
+  title.classList.add('dish-dialog-title');
+  title.textContent = dish.title;
+
+  // Изображение блюда
+  if (dish.image) {
+    const image = document.createElement('div');
+    image.classList.add('dish-dialog-image');
+    const img = document.createElement('img');
+    img.src = dish.image;
+    img.alt = dish.title;
+    image.appendChild(img);
+    dialog.appendChild(closeButton);
+    dialog.appendChild(title);
+    dialog.appendChild(image);
+  } else {
+    dialog.appendChild(closeButton);
+    dialog.appendChild(title);
+  }
+
+  // Секция состава
+  const ingredientsSection = document.createElement('div');
+  ingredientsSection.classList.add('dish-dialog-section');
+
+  const ingredientsTitle = document.createElement('h4');
+  ingredientsTitle.textContent = 'Состав:';
+
+  const ingredientsText = document.createElement('p');
+  ingredientsText.classList.add('dish-dialog-ingredients');
+  ingredientsText.textContent = dish.ingredientsText || 'Нет информации';
+
+  ingredientsSection.appendChild(ingredientsTitle);
+  ingredientsSection.appendChild(ingredientsText);
+  dialog.appendChild(ingredientsSection);
+
+  // Пищевая ценность
+  if (dish.nutrition && dish.nutrition.calories > 0) {
+    const nutritionSection = document.createElement('div');
+    nutritionSection.classList.add('dish-dialog-section');
+
+    const nutritionTitle = document.createElement('h4');
+    nutritionTitle.textContent = 'Пищевая ценность на 100 г:';
+
+    const nutritionGrid = document.createElement('div');
+    nutritionGrid.classList.add('dish-dialog-nutrition-grid');
+
+    const nutritionItems = [
+      { label: 'Калорийность', value: `${dish.nutrition.calories} ккал` },
+      { label: 'Белки', value: `${dish.nutrition.proteins} г` },
+      { label: 'Жиры', value: `${dish.nutrition.fats} г` },
+      { label: 'Углеводы', value: `${dish.nutrition.carbohydrates} г` }
+    ];
+
+    nutritionItems.forEach(item => {
+      const itemDiv = document.createElement('div');
+      itemDiv.classList.add('dish-dialog-nutrition-item');
+
+      const itemLabel = document.createElement('span');
+      itemLabel.classList.add('dish-dialog-nutrition-label');
+      itemLabel.textContent = item.label;
+
+      const itemValue = document.createElement('span');
+      itemValue.classList.add('dish-dialog-nutrition-value');
+      itemValue.textContent = item.value;
+
+      itemDiv.appendChild(itemLabel);
+      itemDiv.appendChild(itemValue);
+      nutritionGrid.appendChild(itemDiv);
+    });
+
+    nutritionSection.appendChild(nutritionTitle);
+    nutritionSection.appendChild(nutritionGrid);
+    dialog.appendChild(nutritionSection);
+  }
+
+  // Общий вес блюда
+  if (dish.totalWeight) {
+    const weightInfo = document.createElement('p');
+    weightInfo.classList.add('dish-dialog-weight');
+    weightInfo.textContent = `Общий вес блюда: ${dish.totalWeight} г`;
+    dialog.appendChild(weightInfo);
+  }
+
+  // Добавляем dialog в body
+  document.body.appendChild(dialog);
+
+  // Открываем модальное окно
+  dialog.showModal();
+
+  // Закрытие по клику на backdrop
+  dialog.addEventListener('click', (e) => {
+    const rect = dialog.getBoundingClientRect();
+    if (
+      e.clientX < rect.left ||
+      e.clientX > rect.right ||
+      e.clientY < rect.top ||
+      e.clientY > rect.bottom
+    ) {
+      dialog.close();
+      dialog.remove();
+    }
+  });
+
+  // Удаляем dialog после закрытия
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+  });
+};
+
+/**
+ * Получить текст даты для дня
+ */
+const getDayDateText = (startDate, weekNumber, dayNumber) => {
+  const start = new Date(startDate);
+  const dayToAdd = (weekNumber - 1) * 7 + dayNumber - 1;
+
+  const currentDate = new Date(start);
+  currentDate.setDate(start.getDate() + dayToAdd);
 
   const months = [
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
@@ -767,308 +922,173 @@ const getDateText = (date = null) => {
   const month = months[currentDate.getMonth()];
   const year = currentDate.getFullYear();
 
-  return `${day} ${month} ${year} года`;
-}
+  return `Рацион питания на ${day} ${month} ${year} года`;
+};
 
-const getCurrentDateText = (dayNumber, dateText, weekNumber) => {
-  const date = new Date(dateText);
-  const dayToAdd = (weekNumber - 1) * 7 + dayNumber - 1;
+/**
+ * Загрузить и отобразить блюда для программы
+ */
+const loadAndRenderDishes = async (programId, weekNumber = null) => {
+  try {
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (!contentWrapper) return;
 
-  const currentDate = new Date(date);
-  currentDate.setDate(date.getDate() + dayToAdd);
-  const text = getDateText(currentDate);
-  return text;
-}
+    // Показываем индикатор загрузки
+    contentWrapper.innerHTML = '<div class="loading">Загрузка блюд...</div>';
 
-const getDayTitle = (dayNumber, dateText, weekNumber) => {
-  const currentDate = getCurrentDateText(dayNumber, dateText, weekNumber);
-  const result = 'Рацион питания на ' + currentDate;
-  return result;
-}
+    const program = window.menuData.programs.find(p => p.id === programId);
+    if (!program) return;
 
-const renderDishCard = (data, wrapper) => {
-  const card = document.createElement('div');
-  card.classList.add('dish-card');
-  card.id = data.id;
-  const image = document.createElement('div');
-  image.classList.add('dish-card-image');
-  image.style.backgroundImage = `url(${data.image})`;
-  image.setAttribute('loading', 'lazy');
-  const content = document.createElement('div');
-  content.classList.add('dish-card-content');
-  const name = document.createElement('h5');
-  name.classList.add('dish-card-name');
-  name.innerHTML = data.name;
-  const ingredients = document.createElement('div');
-  ingredients.classList.add('dish-card-ingredients');
-  ingredients.innerHTML = data.ingredients;
-  const calories = document.createElement('div');
-  calories.classList.add('dish-card-nutrition');
-  calories.innerHTML = data.calories;
-  content.appendChild(name);
-  content.appendChild(ingredients);
-  content.appendChild(calories);
-  card.appendChild(image);
-  card.appendChild(content);
-  wrapper.appendChild(card);
-}
+    // Определяем текущую неделю, если не указана
+    const currentWeek = weekNumber || getCurrentWeekInCycle(program.startedAt || window.menuData.currentCity.startedAt);
 
-const renderDishWrapper = (dayNumber, dateText, weekNumber, wrapper) => {
-  const dishWrapper = document.createElement('div');
-  dishWrapper.classList.add('dishes-wrapper');
-  const dayTitle = document.createElement('div');
-  dayTitle.classList.add('day-title');
-  dayTitle.innerHTML = getDayTitle(dayNumber, dateText, weekNumber);
-  const dayWrapper = document.createElement('div');
-  dayWrapper.classList.add('day-wrapper');
-  dayWrapper.setAttribute('data-day-number', dayNumber);
-  dayWrapper.appendChild(dayTitle);
-  dayWrapper.appendChild(dishWrapper);
-  wrapper.appendChild(dayWrapper);
-  return dishWrapper;
-}
+    // Загружаем блюда
+    const dishesData = await getProgramDishes(programId);
 
-const renderWeekWrapper = (weekNumber, wrapper) => {
-  const week = document.createElement('div');
-  week.classList.add('week-wrapper', 'hidden');
-  week.setAttribute('data-week-number', weekNumber);
-  wrapper.appendChild(week);
-  return week;
-}
+    console.log('Полученные данные блюд:', dishesData);
 
-const renderWeeks = (programWrapper, program) => {
-  for (let i = 0; i < defaultSettings.maxWeeks; i++) {
-    const weekNumber = i + 1;
-    const week = renderWeekWrapper(weekNumber, programWrapper);
-    for (let k = 0; k < defaultSettings.maxDays; k++) {
-      const dayNumber = k + 1;
-      const dateText = program.start;
-      const dishWrapper = renderDishWrapper(dayNumber, dateText, weekNumber, week);
+    if (!dishesData || !dishesData.dishes || dishesData.dishes.length === 0) {
+      contentWrapper.innerHTML = '<div class="no-dishes">Блюда для этой программы пока не добавлены</div>';
+      return;
+    }
+
+    // Группируем блюда по неделям и дням
+    const dishesByWeek = {};
+    dishesData.dishes.forEach(dish => {
+      console.log('Обработка блюда:', dish.title, {
+        ingredients: dish.ingredients,
+        ingredientsText: dish.ingredientsText,
+        nutrition: dish.nutrition,
+        totalWeight: dish.totalWeight,
+        image: dish.image,
+        weekNumber: dish.weekNumber,
+        dayOfWeek: dish.dayOfWeek
+      });
+      const week = dish.weekNumber || 1;
+      const day = dish.dayOfWeek || 1;
+
+      if (!dishesByWeek[week]) {
+        dishesByWeek[week] = {};
+      }
+      if (!dishesByWeek[week][day]) {
+        dishesByWeek[week][day] = [];
+      }
+      dishesByWeek[week][day].push(dish);
+    });
+
+    // Создаем обертку для программы
+    const programWrapper = document.createElement('div');
+    programWrapper.classList.add('program-wrapper');
+    programWrapper.id = `program-${programId}`;
+
+    // Создаем обертки для недель
+    for (let w = 1; w <= 4; w++) {
+      const weekWrapper = document.createElement('div');
+      weekWrapper.classList.add('week-wrapper');
+      weekWrapper.setAttribute('data-week-number', w);
+
+      // Скрываем неактивные недели
+      if (w !== currentWeek) {
+        weekWrapper.classList.add('hidden');
+      }
+
+      // Создаем дни для каждой недели
+      for (let d = 1; d <= 7; d++) {
+        const dayWrapper = document.createElement('div');
+        dayWrapper.classList.add('day-wrapper');
+        dayWrapper.setAttribute('data-day-number', d);
+
+        const dayTitle = document.createElement('div');
+        dayTitle.classList.add('day-title');
+        dayTitle.textContent = getDayDateText(
+          program.startedAt || window.menuData.currentCity.startedAt,
+          w,
+          d
+        );
+
+        const dishesWrapper = document.createElement('div');
+        dishesWrapper.classList.add('dishes-wrapper');
+
+        // Добавляем блюда для этого дня
+        if (dishesByWeek[w] && dishesByWeek[w][d]) {
+          dishesByWeek[w][d]
+            .sort((a, b) => (a.dishNumber || 0) - (b.dishNumber || 0))
+            .forEach(dish => {
+              const dishCard = renderDishCard(dish);
+              dishesWrapper.appendChild(dishCard);
+            });
+        }
+
+        dayWrapper.appendChild(dayTitle);
+        dayWrapper.appendChild(dishesWrapper);
+        weekWrapper.appendChild(dayWrapper);
+      }
+
+      programWrapper.appendChild(weekWrapper);
+    }
+
+    contentWrapper.innerHTML = '';
+    contentWrapper.appendChild(programWrapper);
+
+  } catch (error) {
+    console.error('Ошибка при загрузке блюд:', error);
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (contentWrapper) {
+      contentWrapper.innerHTML = '<div class="error">Не удалось загрузить блюда</div>';
     }
   }
-}
+};
 
-const renderWeekOptions = () => {
-  for (let i = 0; i < defaultSettings.maxWeeks; i++) {
-    const select = document.querySelector('select[name="week"]');
-    const option = document.createElement('option');
-    option.value = i + 1;
-    option.innerHTML = `${i + 1} неделя`;
-    select.appendChild(option);
-  }
-}
+// ====================
+// ИНИЦИАЛИЗАЦИЯ
+// ====================
 
-const renderProgramWrapper = (program) => {
-  const programWrapper = document.createElement('div');
-  renderWeeks(programWrapper, program);
-  const contentWrapper = document.querySelector('.content-wrapper');
-  contentWrapper.appendChild(programWrapper);
-
-  programWrapper.classList.add('program-wrapper', 'hidden');
-  programWrapper.setAttribute('id', program.id);
-  programWrapper.setAttribute('data-program-name', program.name);
-  programWrapper.setAttribute('data-sort', program.sort);
-}
-
-const renderCards = async (program) => {
-  program.dishes = await setDishes(program.id);
-  if (program && Array.isArray(program.dishes) && program.dishes.length > 0) {
-    program.dishes.forEach(dish => {
-      const programWrapper = document.querySelector(`.program-wrapper#${program.id}`);
-      const week = programWrapper.querySelector(`.week-wrapper[data-week-number="${dish.week}"]`);
-      if (week) {
-        const day = week.querySelector(`.day-wrapper[data-day-number="${dish.day}"] .dishes-wrapper`);
-        if (day) renderDishCard(dish, day);
-      }
-    });
-  } else {
-    console.warn(`Программа ${program.name} не содержит блюд`);
-  }
-}
-
-const renderBtns = (program) => {
-  const input = document.createElement('input');
-  input.type = 'radio';
-  input.name = 'program';
-  input.id = 'program-' + program.sort;
-  input.value = program.name;
-  input.hidden = true;
-
-  const span = document.createElement('span');
-  span.innerHTML = program.name;
-
-  const label = document.createElement('label');
-  label.classList.add('menu-button', 'program');
-  label.setAttribute('for', 'program-' + program.sort);
-  label.setAttribute('data-program-id', program.id);
-  label.disabled = true;
-  label.appendChild(input);
-  label.appendChild(span);
-
-  const programButtonsWrapper = document.querySelector('.program-buttons-wrapper');
-  programButtonsWrapper.appendChild(label);
-}
-
-const renderTargetBtns = (program) => {
-  const emoji = document.createElement('span');
-  emoji.classList.add('target-button-emoji');
-  emoji.innerHTML = program.info?.emoji;
-  const text = document.createElement('span');
-  text.classList.add('target-button-text');
-  text.innerHTML = program.info?.slogan;
-
-  const button = document.createElement('div');
-  button.classList.add('target-button');
-  button.setAttribute('data-program-id', program.id);
-  button.appendChild(emoji);
-  button.appendChild(text);
-
-  const wrapper = blockTarget.querySelector('.target-buttons-wrapper');
-  wrapper.appendChild(button);
-}
-
-const renderSlide = (program) => {
-  const swiperWrapper = document.querySelector(`.${CONFIG_PROGRAMM.classname} .swiper-wrapper`);
-  const slide = document.createElement('div');
-  slide.classList.add('swiper-slide');
-
-  const programWrapper = document.createElement('div');
-  programWrapper.classList.add('program-info-wrapper');
-  programWrapper.setAttribute('data-type', 'slider');
-  programWrapper.setAttribute('data-program-id', program.id);
-
-  const logoEmoji = document.createElement('span');
-  logoEmoji.classList.add('program-logo-emoji');
-  logoEmoji.innerHTML = program.info?.emoji || '';
-
-  const logoText = document.createElement('span');
-  logoText.classList.add('program-logo-text');
-  logoText.innerHTML = program.info?.slogan || '';
-
-  const logoWrapper = document.createElement('div');
-  logoWrapper.classList.add('program-logo', 'menu-program-logo');
-  logoWrapper.appendChild(logoEmoji);
-  logoWrapper.appendChild(logoText);
-
-  const title = document.createElement('h2');
-  title.classList.add('program-title-text');
-  title.innerHTML = program.name || '';
-
-  const text = document.createElement('div');
-  text.classList.add('program-content-text');
-  text.innerHTML = program.info?.text || '';
-
-  const button = document.createElement('a');
-  button.classList.add('menu-button', 'summary-button');
-  button.setAttribute('href', '#popup:calc');
-  button.innerHTML = 'Калькулятор калорий';
-
-  programWrapper.appendChild(logoWrapper);
-  programWrapper.appendChild(title);
-  programWrapper.appendChild(text);
-  programWrapper.appendChild(button);
-  slide.appendChild(programWrapper);
-  swiperWrapper.appendChild(slide);
-}
-
-const renderSlider = () => {
-  const element = document.querySelector(`.${CONFIG_PROGRAMM.classname}`);
-  swiperProgramm = new Swiper(element, {
-    autoplay: false,
-    loop: true,
-    navigation: {
-      nextEl: '.swiper-button-next',
-      prevEl: '.swiper-button-prev',
-    },
-    slidesPerView: 1,
-  });
-  swiperProgramm.on('slideChange', function (e) {
-    setTimeout(() => {
-      const slideActive = e.slides.find(slide => slide.classList.contains('swiper-slide-active'));
-      const programId = slideActive.querySelector('.program-info-wrapper').getAttribute('data-program-id');
-      const program = getProgramById(programId);
-      window.program = program;
-    }, 20);
-  });
-}
-
-const renderAll = async () => {
-  const programs = await setPrograms();
-
-  // Проверяем, что программы загружены
-  if (!programs || programs.length === 0) {
-    console.error('Не удалось загрузить программы питания');
-    return;
-  }
-
-  const targetBtns = blockTarget.querySelectorAll('.target-button');
-  targetBtns.forEach(btn => btn.remove());
-  const programBtns = blockMenu.querySelectorAll('.menu-button.program');
-  programBtns.forEach(btn => btn.remove());
-  const currentWeekNumber = getCurrentWeekInCycle(programs[0].start);
-
-  for (let i = 0; i < programs.length; i++) {
-    const currentProgram = programs.find(program => program.sort === i + 1);
-    renderTargetBtns(currentProgram);
-    renderSlide(currentProgram);
-    renderBtns(currentProgram);
-    renderProgramWrapper(currentProgram);
-  }
-
-  renderSlider();
-  window.program = window.programs.find(program => program.sort === 1);
-  const currentProgramWrapper = getProgramWrapper();
-  const currentWeek = currentProgramWrapper.querySelector(`.week-wrapper[data-week-number="${currentWeekNumber}"]`);
-  currentWeek && currentWeek.classList.remove('hidden');
-  currentProgramWrapper.classList.remove('hidden');
-  weekNumberToggle();
-  setWeekNumber(currentWeekNumber);
-  targetBtnsListen();
-  programBtnsListen();
-  setSummary();
-
-  for (let i = 0; i < programs.length; i++) {
-    const currentProgram = programs.find(program => program.sort === i + 1);
-    await renderCards(currentProgram);
-  }
-}
-
-const letsGo = async () => {
-  renderWeekOptions();
-  blockMenu.querySelector(`input[name="program"][value="${defaultSettings.program}"]`) && blockMenu.querySelector(`input[name="program"][value="${defaultSettings.program}"]`).click();
-  blockMenu.querySelector(`[data-days-count="${defaultSettings.days}"]`) && blockMenu.querySelector(`[data-days-count="${defaultSettings.days}"]`).click();
+/**
+ * Инициализация приложения
+ */
+const initApp = async () => {
   try {
-    await renderAll();
+    // Инициализируем Intersection Observer для lazy loading изображений
+    imageObserver = initImageObserver();
+
+    console.log('Загрузка данных меню...');
+
+    // Получаем все данные
+    window.menuData = await getMenuData();
+
+    console.log('Данные получены:', window.menuData);
+
+    // Рендерим UI
+    renderProgramButtons(window.menuData.programs);
+    renderTargetButtons(window.menuData.programs);
+    renderProgramSlider(window.menuData.programs);
+    renderWeekSelect();
+
+    // Устанавливаем первую программу как активную
+    if (window.menuData.programs.length > 0) {
+      setActiveProgram(window.menuData.programs[0]);
+    }
+
+    console.log('Приложение инициализировано');
+
   } catch (error) {
     console.error('Ошибка при инициализации:', error);
+
+    // Показываем сообщение об ошибке пользователю
+    const errorMessage = document.createElement('div');
+    errorMessage.style.cssText = 'padding: 20px; background: #ffebee; color: #c62828; text-align: center;';
+    errorMessage.textContent = 'Не удалось загрузить данные меню. Пожалуйста, обновите страницу.';
+
+    const menuElement = document.getElementById('menu');
+    if (menuElement) {
+      menuElement.prepend(errorMessage);
+    }
   }
-}
+};
 
-letsGo();
-
-if (window.innerWidth <= 980) {
-  document.addEventListener('scroll', function () {
-    const windowHeight = window.innerHeight;
-
-    // Появление нижней плашки
-    const programInfo = blockMenu.querySelector('#program-info');
-    const summaryWrapper = blockMenu.querySelector('.summary-wrapper');
-    const summaryWrapperHeight = Math.ceil(summaryWrapper.getBoundingClientRect().height);
-    const programContentTextBottom = programInfo.getBoundingClientRect().bottom + summaryWrapperHeight + 0;
-    if (programContentTextBottom <= windowHeight) {
-      summaryWrapper.classList.add('sticky');
-    } else {
-      summaryWrapper.classList.remove('sticky');
-    }
-
-    // Появление кнопки «Изменить»
-    const programButtonsWrapper = blockMenu.querySelector('.program-buttons-wrapper');
-    const chooseProgramButton = blockMenu.querySelector('.menu-button.choose-program');
-    const programButtonsWrapperBottom = programButtonsWrapper.getBoundingClientRect().top + 20;
-    if (programButtonsWrapperBottom < 0) {
-      chooseProgramButton.classList.add('visible');
-    } else {
-      chooseProgramButton.classList.remove('visible');
-    }
-  });
+// Запускаем приложение после загрузки DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
 }

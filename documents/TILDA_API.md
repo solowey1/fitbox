@@ -4,13 +4,13 @@
 
 Специальный публичный API эндпоинт для Tilda frontend, который возвращает все необходимые данные для отображения меню в оптимизированном формате.
 
-**Базовый URL:** `https://api.fitbox.su/api/tilda`
+**Базовый URL:** `https://app.fitbox.su/api/tilda`
 
 **Аутентификация:** Не требуется (публичный доступ)
 
 ## Основные преимущества
 
-✅ **Один запрос вместо множества** - все данные (программы, города, цены) в одном ответе
+✅ **Два запроса вместо множества** - все данные (программы, города, цены) в одном ответе, блюда для программы в другом
 ✅ **Оптимизированная структура** - данные готовы к использованию на фронтенде
 ✅ **Автоматическое определение города** - по поддомену сайта
 ✅ **Минимальная логика на фронтенде** - вся обработка на бэкенде
@@ -39,13 +39,13 @@ GET /api/tilda/menu
 
 ```bash
 # Без параметров (автоопределение города)
-curl https://api.fitbox.su/api/tilda/menu
+curl https://app.fitbox.su/api/tilda/menu
 
 # С указанием поддомена
-curl https://api.fitbox.su/api/tilda/menu?subdomain=kzn
+curl https://app.fitbox.su/api/tilda/menu?subdomain=kzn
 
 # С указанием города
-curl https://api.fitbox.su/api/tilda/menu?city=Казань
+curl https://app.fitbox.su/api/tilda/menu?city=Казань
 ```
 
 #### Пример ответа
@@ -155,13 +155,13 @@ GET /api/tilda/menu/:programId/dishes
 
 ```bash
 # Все блюда программы
-curl https://api.fitbox.su/api/tilda/menu/1/dishes
+curl https://app.fitbox.su/api/tilda/menu/1/dishes
 
 # Блюда на конкретный день
-curl https://api.fitbox.su/api/tilda/menu/1/dishes?day=1
+curl https://app.fitbox.su/api/tilda/menu/1/dishes?day=1
 
 # Блюда на конкретную неделю
-curl https://api.fitbox.su/api/tilda/menu/1/dishes?week=1
+curl https://app.fitbox.su/api/tilda/menu/1/dishes?week=1
 ```
 
 #### Пример ответа
@@ -173,7 +173,7 @@ curl https://api.fitbox.su/api/tilda/menu/1/dishes?week=1
     {
       "id": 1,
       "title": "Творожная запеканка с малиной и йогурт",
-      "image": "https://api.fitbox.su/uploads/dishes/image.png",
+      "image": "https://app.fitbox.su/uploads/dishes/image.png",
       "dayOfWeek": 1,
       "week": 1,
       "mealType": "breakfast",
@@ -182,7 +182,7 @@ curl https://api.fitbox.su/api/tilda/menu/1/dishes?week=1
     {
       "id": 2,
       "title": "Куриная грудка с грибами и пенне",
-      "image": "https://api.fitbox.su/uploads/dishes/image2.png",
+      "image": "https://app.fitbox.su/uploads/dishes/image2.png",
       "dayOfWeek": 1,
       "week": 1,
       "mealType": "lunch",
@@ -214,7 +214,7 @@ GET /api/tilda/dishes/:dishId
 #### Пример запроса
 
 ```bash
-curl https://api.fitbox.su/api/tilda/dishes/1
+curl https://app.fitbox.su/api/tilda/dishes/1
 ```
 
 #### Пример ответа
@@ -223,7 +223,7 @@ curl https://api.fitbox.su/api/tilda/dishes/1
 {
   "id": 1,
   "title": "Творожная запеканка с малиной и йогурт",
-  "image": "https://api.fitbox.su/uploads/dishes/image.png",
+  "image": "https://app.fitbox.su/uploads/dishes/image.png",
   "ingredients": [
     {
       "id": 175,
@@ -260,7 +260,7 @@ curl https://api.fitbox.su/api/tilda/dishes/1
 
 ```javascript
 // Получить все данные меню
-const menuData = await fetch('https://api.fitbox.su/api/tilda/menu')
+const menuData = await fetch('https://app.fitbox.su/api/tilda/menu')
   .then(res => res.json());
 
 console.log('Текущий город:', menuData.currentCity.title);
@@ -268,7 +268,7 @@ console.log('Программы:', menuData.programs);
 
 // Получить блюда для программы
 const programId = menuData.programs[0].id;
-const dishes = await fetch(`https://api.fitbox.su/api/tilda/menu/${programId}/dishes?week=1`)
+const dishes = await fetch(`https://app.fitbox.su/api/tilda/menu/${programId}/dishes?week=1`)
   .then(res => res.json());
 
 console.log('Блюда на неделю:', dishes.dishes);
@@ -278,7 +278,7 @@ console.log('Блюда на неделю:', dishes.dishes);
 
 ```javascript
 // Получить данные меню
-$.getJSON('https://api.fitbox.su/api/tilda/menu', function(data) {
+$.getJSON('https://app.fitbox.su/api/tilda/menu', function(data) {
   console.log('Программы:', data.programs);
 
   // Отобразить программы
@@ -290,12 +290,12 @@ $.getJSON('https://api.fitbox.su/api/tilda/menu', function(data) {
 });
 ```
 
-### Tilda Zero Block
+### Tilda HTML Block
 
 ```html
 <script>
 // Автоматически определяет город по поддомену
-fetch('https://api.fitbox.su/api/tilda/menu')
+fetch('https://app.fitbox.su/api/tilda/menu')
   .then(response => response.json())
   .then(data => {
     // Рендерим программы
@@ -425,10 +425,10 @@ interface Dish {
 
 ## Best Practices
 
-1. **Кэширование** - Кэшируйте данные меню на фронтенде (например, в localStorage) на 10-15 минут
+1. **Кэширование** - В официальном скрипте tilda.js уже реализовано кэширование в localStorage на 60 минут. При самостоятельной интеграации рекомендуется кэшировать данные меню на 10-15 минут
 2. **Обработка ошибок** - Всегда обрабатывайте ошибки сети и показывайте пользователю понятные сообщения
 3. **Lazy loading** - Загружайте блюда программы только когда пользователь выбирает программу
-4. **Оптимизация изображений** - Используйте lazy loading для изображений блюд
+4. **Оптимизация изображений** - Используйте lazy loading для изображений блюд (реализовано в tilda.js)
 5. **Автоопределение города** - Не передавайте параметр subdomain, если работаете на нужном поддомене
 
 ## Миграция со старого API
@@ -472,7 +472,7 @@ A: Нет, все эндпоинты `/api/tilda/*` публичные и не �
 A: Да, API универсален и подходит для любого фронтенда.
 
 **Q: Как часто обновляются данные?**
-A: Данные обновляются в реальном времени. Рекомендуем кэшировать на клиенте на 10-15 минут.
+A: Данные обновляются в реальном времени. В официальном скрипте tilda.js кэширование настроено на 60 минут в localStorage.
 
 **Q: Можно ли получить блюда всех программ одним запросом?**
 A: Нет, блюда загружаются отдельно для каждой программы, чтобы не перегружать первый запрос.

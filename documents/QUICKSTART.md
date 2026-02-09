@@ -56,31 +56,17 @@ curl http://localhost:3000/health
 
 ## 7. Тестовые запросы
 
-### Получить все города
 ```bash
+# Проверка работы API
 curl http://localhost:3000/api/cities
-```
-
-### Получить программы питания
-```bash
-curl http://localhost:3000/api/nutrition-programs
-```
-
-### Получить программу с ценами
-```bash
-curl http://localhost:3000/api/nutrition-programs/1/prices
-```
-
-### Получить все блюда
-```bash
-curl http://localhost:3000/api/dishes
-```
-
-### Получить блюдо с ингредиентами
-```bash
-curl http://localhost:3000/api/dishes/1/ingredients
+curl http://localhost:3000/api/programs
 ```
 
 ## Готово!
 
-Теперь можно подключать фронтенд к API на `http://localhost:3000`
+Сервер запущен на `http://localhost:3000`
+
+**Дальнейшие шаги:**
+- Примеры запросов: [documents/API_EXAMPLES.md](./API_EXAMPLES.md)
+- Подключение к Tilda: [documents/TILDA_CONNECT.md](./TILDA_CONNECT.md)
+- Полная документация: [README.md](../README.md)

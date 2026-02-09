@@ -88,19 +88,19 @@ DELETE /api/programs/:id      → Очищает весь кэш
 
 **Очистить весь кэш:**
 ```bash
-curl -X POST https://api.fitbox.su/api/cache/clear \
+curl -X POST https://app.fitbox.su/api/cache/clear \
   -H "X-API-Key: your-api-key"
 ```
 
 **Очистить кэш по паттерну:**
 ```bash
-curl -X POST "https://api.fitbox.su/api/cache/clear?pattern=cache:/api/tilda/*" \
+curl -X POST "https://app.fitbox.su/api/cache/clear?pattern=cache:/api/tilda/*" \
   -H "X-API-Key: your-api-key"
 ```
 
 **Получить статистику кэша:**
 ```bash
-curl https://api.fitbox.su/api/cache/stats
+curl https://app.fitbox.su/api/cache/stats
 ```
 
 Пример ответа:
@@ -198,7 +198,7 @@ NC_REDIS_URL=redis://localhost:6380
 NocoDB поддерживает webhooks при изменении данных:
 
 1. Настройте webhook в NocoDB:
-   - URL: `https://api.fitbox.su/api/cache/clear`
+   - URL: `https://app.fitbox.su/api/cache/clear`
    - Method: POST
    - Headers: `X-API-Key: your-api-key`
 
@@ -266,7 +266,7 @@ FOR EACH ROW EXECUTE FUNCTION notify_data_change();
 
 ```bash
 # Добавьте в crontab (каждые 15 минут)
-*/15 * * * * curl -X POST https://api.fitbox.su/api/cache/clear \
+*/15 * * * * curl -X POST https://app.fitbox.su/api/cache/clear \
   -H "X-API-Key: your-api-key"
 ```
 
@@ -327,7 +327,7 @@ await clearCache('cache:/api/tilda/menu/1/*');
 
 ```bash
 # После деплоя новой версии
-curl -X POST https://api.fitbox.su/api/cache/clear \
+curl -X POST https://app.fitbox.su/api/cache/clear \
   -H "X-API-Key: your-api-key"
 ```
 
