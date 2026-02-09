@@ -10,13 +10,13 @@ INSERT INTO cities (title, sort, started_at) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Программы питания (без привязки к городу)
-INSERT INTO nutrition_programs (title, emoji, data, sort) VALUES
-('Офис', '👩‍💼', '{"calories_from": 800, "calories_to": 900, "proteins": 47, "fats": 32, "carbohydrates": 88}', 1),
-('Баланс', '👨‍💼', '{"calories_from": 1050, "calories_to": 1150, "proteins": 58, "fats": 41, "carbohydrates": 113}', 2),
-('Фитнес', '🤸', '{"calories_from": 900, "calories_to": 1000, "proteins": 57, "fats": 42, "carbohydrates": 98}', 3),
-('Классик мини', '🧍', '{"calories_from": 1250, "calories_to": 1400, "proteins": 71, "fats": 54, "carbohydrates": 126}', 4),
-('Классик', '🏃', '{"calories_from": 1800, "calories_to": 2000, "proteins": 107, "fats": 80, "carbohydrates": 188}', 5),
-('Классик +', '💪', '{"calories_from": 2450, "calories_to": 2650, "proteins": 142, "fats": 107, "carbohydrates": 251}', 6)
+INSERT INTO nutrition_programs (title, emoji, description, slogan, data, sort) VALUES
+('Офис', '👩‍💼', 'Трехразовое питание на 800-900 ккал/день разнообразит ваш привычный рацион и поможет избежать ежедневных вопросов «что бы сегодня поесть?»', 'Кушай на работе', '{"calories_from": 800, "calories_to": 900, "proteins": 47, "fats": 32, "carbohydrates": 88}', 1),
+('Баланс', '👨‍💼', 'Сбалансированное питание для поддержания веса и хорошего самочувствия', 'Баланс во всём', '{"calories_from": 1050, "calories_to": 1150, "proteins": 58, "fats": 41, "carbohydrates": 113}', 2),
+('Фитнес', '🤸', 'Идеально подходит для тех, кто ведет активный образ жизни и следит за фигурой', 'Будь в форме', '{"calories_from": 900, "calories_to": 1000, "proteins": 57, "fats": 42, "carbohydrates": 98}', 3),
+('Классик мини', '🧍', 'Полноценное питание с оптимальной калорийностью', 'Оптимальный выбор', '{"calories_from": 1250, "calories_to": 1400, "proteins": 71, "fats": 54, "carbohydrates": 126}', 4),
+('Классик', '🏃', 'Классическое пятиразовое питание для поддержания активности в течение дня', 'Классика вкуса', '{"calories_from": 1800, "calories_to": 2000, "proteins": 107, "fats": 80, "carbohydrates": 188}', 5),
+('Классик +', '💪', 'Усиленное питание для людей с высокими энергетическими затратами', 'Максимум энергии', '{"calories_from": 2450, "calories_to": 2650, "proteins": 142, "fats": 107, "carbohydrates": 251}', 6)
 ON CONFLICT DO NOTHING;
 
 -- Привязка программ питания ко всем городам

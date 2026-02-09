@@ -67,6 +67,8 @@ const getTildaMenu = async (req, res) => {
         np.id,
         np.title,
         np.emoji,
+        np.description,
+        np.slogan,
         np.data,
         np.sort,
         np.created_at,
@@ -102,7 +104,17 @@ const getTildaMenu = async (req, res) => {
             ) prices_subquery
           ),
           '[]'
-        ) as prices
+        ) as prices,
+        COALESCE(
+          (
+            SELECT COUNT(DISTINCT dish_number)
+            FROM nutrition_program_dishes npd
+            WHERE npd.nutrition_program_id = np.id
+              AND npd.day_of_week = 1
+              AND npd.week_number = 1
+          ),
+          0
+        ) as dishes_per_day
       FROM nutrition_programs np
       ORDER BY np.sort ASC
     `);
@@ -111,42 +123,14 @@ const getTildaMenu = async (req, res) => {
     const programs = programsResult.rows.map(program => {
       const data = program.data || {};
 
-      // Формируем описание программы
-      const descriptions = {
-        'Офис': 'Трехразовое питание на 800-900 ккал/день разнообразит ваш привычный рацион и поможет избежать ежедневных вопросов «что бы сегодня поесть?»',
-        'Баланс': 'Сбалансированное питание для поддержания веса и хорошего самочувствия',
-        'Фитнес': 'Идеально подходит для тех, кто ведет активный образ жизни и следит за фигурой',
-        'Классик мини': 'Полноценное питание с оптимальной калорийностью',
-        'Классик': 'Классическое пятиразовое питание для поддержания активности в течение дня',
-        'Классик +': 'Усиленное питание для людей с высокими энергетическими затратами'
-      };
-
-      const slogans = {
-        'Офис': 'Кушай на работе',
-        'Баланс': 'Баланс во всём',
-        'Фитнес': 'Будь в форме',
-        'Классик мини': 'Оптимальный выбор',
-        'Классик': 'Классика вкуса',
-        'Классик +': 'Максимум энергии'
-      };
-
-      const dishesCount = {
-        'Офис': 3,
-        'Баланс': 4,
-        'Фитнес': 4,
-        'Классик мини': 4,
-        'Классик': 5,
-        'Классик +': 6
-      };
-
       return {
         id: program.id,
         title: program.title,
         emoji: program.emoji,
         sort: program.sort,
-        description: descriptions[program.title] || '',
-        slogan: slogans[program.title] || '',
-        dishesPerDay: dishesCount[program.title] || 3,
+        description: program.description || '',
+        slogan: program.slogan || '',
+        dishesPerDay: parseInt(program.dishes_per_day) || 0,
         nutrition: {
           caloriesFrom: data.calories_from || null,
           caloriesTo: data.calories_to || null,
@@ -244,7 +228,7 @@ const getProgramDishes = async (req, res) => {
         -- Общий вес блюда (сумма всех ингредиентов)
         COALESCE(
           (
-            SELECT SUM(di.quantity)
+            SELECT ROUND(SUM(di.quantity))
             FROM dish_ingredients di
             WHERE di.dish_id = d.id
           ),

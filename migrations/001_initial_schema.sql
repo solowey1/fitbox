@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS nutrition_programs (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     emoji VARCHAR(10),
+    description TEXT, -- Описание программы
+    slogan VARCHAR(255), -- Слоган программы
     data JSONB NOT NULL, -- { calories_from, calories_to, proteins, fats, carbohydrates }
     sort INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
