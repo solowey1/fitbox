@@ -224,7 +224,7 @@ const getProgramDishes = async (req, res) => {
         npd.dish_number,
         COALESCE(
           (
-            SELECT string_agg(i.title || ' (' || di.quantity || 'г)', ', ')
+            SELECT string_agg(i.title || ' (' || ROUND(di.quantity) || ' г)', ', ')
             FROM dish_ingredients di
             JOIN ingredients i ON di.ingredient_id = i.id
             WHERE di.dish_id = d.id
@@ -453,7 +453,7 @@ const getDishDetails = async (req, res) => {
 
     // Формируем строку ингредиентов
     const ingredientsText = (dish.ingredients || [])
-      .map(ing => `${ing.title} (${ing.quantity}г)`)
+      .map(ing => `${ing.title} (${ing.quantity} г)`)
       .join(', ');
 
     res.json({

@@ -438,16 +438,23 @@
   border: none;
   border-radius: var(--xl);
   padding: var(--m);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  outline-color: transparent;
+  outline-style: solid;
+  outline-width: 1px;
+  outline-offset: 0px;
+  transition: transform 0.2s ease, outline-color 0.2s ease, outline-offset 0.2s ease, outline-width 0.2s ease;
 }
 
 .dish-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(4px);
+  outline-color: var(--primary);
+  outline-offset: 3px;
 }
 
 .dish-card:active {
-  transform: translateY(-2px);
+  transform: translateY(4px);
+  outline-offset: 2px;
+  outline-width: 2px;
 }
 
 .dish-card-content {

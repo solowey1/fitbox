@@ -25,8 +25,8 @@ window.clearFitboxCache = () => {
         count++;
       }
     });
-    console.log(`✓ Кэш очищен (удалено записей: ${count})`);
-    console.log('⟳ Обновите страницу для загрузки свежих данных');
+    console.info(`✓ Кэш очищен (удалено записей: ${count})`);
+    console.info('⟳ Обновите страницу для загрузки свежих данных');
     return `Удалено ${count} записей из кэша`;
   } catch (error) {
     console.error('Ошибка при очистке кэша:', error);
@@ -57,7 +57,7 @@ const getMenuData = async () => {
       return cachedData;
     }
 
-    console.log('⟳ Загрузка данных меню с сервера...');
+    // console.log('⟳ Загрузка данных меню с сервера...');
 
     const response = await fetch(`${API_BASE_URL}/tilda/menu?subdomain=${subdomain}`, {
       method: 'GET',
@@ -97,7 +97,7 @@ const getProgramDishes = async (programId, week = null, day = null) => {
       return cachedData;
     }
 
-    console.log(`⟳ Загрузка блюд программы ${programId} с сервера...`);
+    // console.log(`⟳ Загрузка блюд программы ${programId} с сервера...`);
 
     let url = `${API_BASE_URL}/tilda/menu/${programId}/dishes`;
     const params = new URLSearchParams();
@@ -159,7 +159,7 @@ const getFromCache = (key) => {
       return null;
     }
 
-    console.log(`✓ Данные загружены из кэша: ${key}`);
+    // console.log(`✓ Данные загружены из кэша: ${key}`);
     return data.value;
   } catch (error) {
     console.error('Ошибка при чтении кэша:', error);
@@ -177,7 +177,7 @@ const saveToCache = (key, value) => {
       timestamp: Date.now()
     };
     localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data));
-    console.log(`✓ Данные сохранены в кэш: ${key} (TTL: 60 мин)`);
+    // console.log(`✓ Данные сохранены в кэш: ${key} (TTL: 60 мин)`);
   } catch (error) {
     console.error('Ошибка при сохранении в кэш:', error);
   }
@@ -194,7 +194,7 @@ const clearCache = () => {
         localStorage.removeItem(key);
       }
     });
-    console.log('✓ Кэш очищен');
+    console.info('✓ Кэш очищен');
   } catch (error) {
     console.error('Ошибка при очистке кэша:', error);
   }
@@ -245,11 +245,7 @@ const initImageObserver = () => {
 const getCurrentWeekInCycle = (startDate) => {
   // Создаем даты с обнуленным временем (начало дня 00:00:00)
   const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const diffTime = today.getTime() - start.getTime();
 
   if (diffTime < 0) return 1;
@@ -700,6 +696,9 @@ const renderWeekSelect = () => {
   const newSelect = select.cloneNode(true);
   select.parentNode.replaceChild(newSelect, select);
 
+  // Устанавливаем выбранную неделю после клонирования
+  newSelect.value = currentWeek;
+
   // Добавляем обработчик изменения недели
   newSelect.addEventListener('change', (e) => {
     const weekNumber = parseInt(e.target.value);
@@ -945,7 +944,7 @@ const loadAndRenderDishes = async (programId, weekNumber = null) => {
     // Загружаем блюда
     const dishesData = await getProgramDishes(programId);
 
-    console.log('Полученные данные блюд:', dishesData);
+    // console.log('Полученные данные блюд:', dishesData);
 
     if (!dishesData || !dishesData.dishes || dishesData.dishes.length === 0) {
       contentWrapper.innerHTML = '<div class="no-dishes">Блюда для этой программы пока не добавлены</div>';
@@ -955,15 +954,15 @@ const loadAndRenderDishes = async (programId, weekNumber = null) => {
     // Группируем блюда по неделям и дням
     const dishesByWeek = {};
     dishesData.dishes.forEach(dish => {
-      console.log('Обработка блюда:', dish.title, {
-        ingredients: dish.ingredients,
-        ingredientsText: dish.ingredientsText,
-        nutrition: dish.nutrition,
-        totalWeight: dish.totalWeight,
-        image: dish.image,
-        weekNumber: dish.weekNumber,
-        dayOfWeek: dish.dayOfWeek
-      });
+      // console.log('Обработка блюда:', dish.title, {
+      //   ingredients: dish.ingredients,
+      //   ingredientsText: dish.ingredientsText,
+      //   nutrition: dish.nutrition,
+      //   totalWeight: dish.totalWeight,
+      //   image: dish.image,
+      //   weekNumber: dish.weekNumber,
+      //   dayOfWeek: dish.dayOfWeek
+      // });
       const week = dish.weekNumber || 1;
       const day = dish.dayOfWeek || 1;
 
@@ -1051,12 +1050,12 @@ const initApp = async () => {
     // Инициализируем Intersection Observer для lazy loading изображений
     imageObserver = initImageObserver();
 
-    console.log('Загрузка данных меню...');
+    // console.log('Загрузка данных меню...');
 
     // Получаем все данные
     window.menuData = await getMenuData();
 
-    console.log('Данные получены:', window.menuData);
+    // console.log('Данные получены:', window.menuData);
 
     // Рендерим UI
     renderProgramButtons(window.menuData.programs);
@@ -1069,7 +1068,7 @@ const initApp = async () => {
       setActiveProgram(window.menuData.programs[0]);
     }
 
-    console.log('Приложение инициализировано');
+    // console.info('Приложение инициализировано');
 
   } catch (error) {
     console.error('Ошибка при инициализации:', error);
