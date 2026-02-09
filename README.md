@@ -97,6 +97,7 @@ npm start
 - **[API примеры](./documents/API_EXAMPLES.md)** - примеры всех запросов к API
 - **[Аутентификация](./documents/API_AUTHENTICATION.md)** - настройка и использование API ключа
 - **[Кэширование](./documents/CACHING.md)** - Redis и in-memory кэш
+- **[Питательность программ](./documents/NUTRITION_RECALCULATION.md)** - система автоматического пересчета
 - **[Tilda API](./documents/TILDA_API.md)** - API для Tilda frontend
 - **[Подключение к Tilda](./documents/TILDA_CONNECT.md)** - установка скриптов на Tilda
 - **[Lazy Loading](./documents/LAZY_LOADING_README.md)** - оптимизация загрузки изображений

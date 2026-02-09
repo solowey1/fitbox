@@ -25,6 +25,7 @@
   "homepage": "https://github.com/solowey1/fitbox#readme",
   "dependencies": {
     "cors": "^2.8.5",
+    "cron": "^3.1.8",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "ioredis": "^5.9.2",
