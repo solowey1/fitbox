@@ -112,9 +112,9 @@ BEGIN
         program_record.title,
         min_calories,
         max_calories,
-        avg_proteins,
-        avg_fats,
-        avg_carbs,
+        avg_proteins::INTEGER,
+        avg_fats::INTEGER,
+        avg_carbs::INTEGER,
         TRUE;
     ELSE
       -- Нет данных для этой программы
