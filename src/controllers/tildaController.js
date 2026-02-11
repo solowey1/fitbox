@@ -198,6 +198,15 @@ const getProgramDishes = async (req, res) => {
     const { programId } = req.params;
     const { week, day } = req.query;
 
+    // Получаем коэффициент порции для программы
+    const coeffResult = await db.query(
+      'SELECT COALESCE(portion_coefficient, 1.0) as portion_coefficient FROM nutrition_programs WHERE id = $1',
+      [programId]
+    );
+    const portionCoefficient = coeffResult.rows.length > 0
+      ? parseFloat(coeffResult.rows[0].portion_coefficient)
+      : 1.0;
+
     let query = `
       SELECT
         d.id,
@@ -208,7 +217,7 @@ const getProgramDishes = async (req, res) => {
         npd.dish_number,
         COALESCE(
           (
-            SELECT string_agg(i.title || ' (' || ROUND(di.quantity) || ' г)', ', ')
+            SELECT string_agg(i.title || ' (' || ROUND(di.quantity * $2) || ' г)', ', ')
             FROM dish_ingredients di
             JOIN ingredients i ON di.ingredient_id = i.id
             WHERE di.dish_id = d.id
@@ -225,20 +234,20 @@ const getProgramDishes = async (req, res) => {
           ),
           '[]'
         ) as ingredients,
-        -- Общий вес блюда (сумма всех ингредиентов)
+        -- Общий вес блюда (сумма всех ингредиентов с учётом коэффициента порции)
         COALESCE(
           (
-            SELECT ROUND(SUM(di.quantity))
+            SELECT ROUND(SUM(di.quantity * $2))
             FROM dish_ingredients di
             WHERE di.dish_id = d.id
           ),
           0
         ) as total_weight,
-        -- Общая калорийность блюда
+        -- Общая калорийность блюда (с учётом коэффициента порции)
         COALESCE(
           (
             SELECT SUM(
-              (i.calories * di.quantity / 100)::numeric(10,2)
+              (i.calories * di.quantity * $2 / 100)::numeric(10,2)
             )
             FROM dish_ingredients di
             JOIN ingredients i ON di.ingredient_id = i.id
@@ -250,7 +259,7 @@ const getProgramDishes = async (req, res) => {
         COALESCE(
           (
             SELECT SUM(
-              (i.proteins * di.quantity / 100)::numeric(10,2)
+              (i.proteins * di.quantity * $2 / 100)::numeric(10,2)
             )
             FROM dish_ingredients di
             JOIN ingredients i ON di.ingredient_id = i.id
@@ -262,7 +271,7 @@ const getProgramDishes = async (req, res) => {
         COALESCE(
           (
             SELECT SUM(
-              (i.fats * di.quantity / 100)::numeric(10,2)
+              (i.fats * di.quantity * $2 / 100)::numeric(10,2)
             )
             FROM dish_ingredients di
             JOIN ingredients i ON di.ingredient_id = i.id
@@ -274,7 +283,7 @@ const getProgramDishes = async (req, res) => {
         COALESCE(
           (
             SELECT SUM(
-              (i.carbohydrates * di.quantity / 100)::numeric(10,2)
+              (i.carbohydrates * di.quantity * $2 / 100)::numeric(10,2)
             )
             FROM dish_ingredients di
             JOIN ingredients i ON di.ingredient_id = i.id
@@ -287,11 +296,11 @@ const getProgramDishes = async (req, res) => {
       WHERE npd.nutrition_program_id = $1
     `;
 
-    const params = [programId];
+    const params = [programId, portionCoefficient];
 
     if (day) {
-      query += ` AND npd.day_of_week = $${params.length + 1}`;
       params.push(parseInt(day));
+      query += ` AND npd.day_of_week = $${params.length}`;
     }
 
     query += ` ORDER BY npd.day_of_week, npd.week_number, npd.dish_number`;

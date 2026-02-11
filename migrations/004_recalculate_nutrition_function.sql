@@ -21,10 +21,10 @@ DECLARE
   avg_fats NUMERIC;
   avg_carbs NUMERIC;
 BEGIN
-  -- Проходим по всем программам питания
-  FOR program_record IN SELECT id, title FROM nutrition_programs ORDER BY id LOOP
+  -- Проходим по всем программам питания (включая коэффициент порции)
+  FOR program_record IN SELECT id, title, COALESCE(portion_coefficient, 1.0) as portion_coefficient FROM nutrition_programs ORDER BY id LOOP
 
-    -- Вычисляем статистику по блюдам программы
+    -- Вычисляем статистику по блюдам программы (с учётом коэффициента порции)
     SELECT
       MIN(daily_calories)::INTEGER as min_cal,
       MAX(daily_calories)::INTEGER as max_cal,
@@ -40,7 +40,7 @@ BEGIN
         SUM(
           COALESCE(
             (
-              SELECT SUM((i.calories * di.quantity / 100))
+              SELECT SUM((i.calories * di.quantity * program_record.portion_coefficient / 100))
               FROM dish_ingredients di
               JOIN ingredients i ON i.id = di.ingredient_id
               WHERE di.dish_id = d.id
@@ -51,7 +51,7 @@ BEGIN
         SUM(
           COALESCE(
             (
-              SELECT SUM((i.proteins * di.quantity / 100))
+              SELECT SUM((i.proteins * di.quantity * program_record.portion_coefficient / 100))
               FROM dish_ingredients di
               JOIN ingredients i ON i.id = di.ingredient_id
               WHERE di.dish_id = d.id
@@ -62,7 +62,7 @@ BEGIN
         SUM(
           COALESCE(
             (
-              SELECT SUM((i.fats * di.quantity / 100))
+              SELECT SUM((i.fats * di.quantity * program_record.portion_coefficient / 100))
               FROM dish_ingredients di
               JOIN ingredients i ON i.id = di.ingredient_id
               WHERE di.dish_id = d.id
@@ -73,7 +73,7 @@ BEGIN
         SUM(
           COALESCE(
             (
-              SELECT SUM((i.carbohydrates * di.quantity / 100))
+              SELECT SUM((i.carbohydrates * di.quantity * program_record.portion_coefficient / 100))
               FROM dish_ingredients di
               JOIN ingredients i ON i.id = di.ingredient_id
               WHERE di.dish_id = d.id

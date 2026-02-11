@@ -105,12 +105,12 @@ const createNutritionProgram = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const { title, emoji, data, city_ids, sort } = req.body;
+    const { title, emoji, data, city_ids, sort, portion_coefficient } = req.body;
 
     // Создать программу питания
     const programResult = await client.query(
-      'INSERT INTO nutrition_programs (title, emoji, data, sort) VALUES ($1, $2, $3, $4) RETURNING *',
-      [title, emoji, JSON.stringify(data), sort || 0]
+      'INSERT INTO nutrition_programs (title, emoji, data, sort, portion_coefficient) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [title, emoji, JSON.stringify(data), sort || 0, portion_coefficient || 1.0]
     );
 
     const programId = programResult.rows[0].id;
@@ -158,12 +158,12 @@ const updateNutritionProgram = async (req, res) => {
     await client.query('BEGIN');
 
     const { id } = req.params;
-    const { title, emoji, data, city_ids, sort } = req.body;
+    const { title, emoji, data, city_ids, sort, portion_coefficient } = req.body;
 
     // Обновить программу
     const result = await client.query(
-      'UPDATE nutrition_programs SET title = $1, emoji = $2, data = $3, sort = $4 WHERE id = $5 RETURNING *',
-      [title, emoji, JSON.stringify(data), sort, id]
+      'UPDATE nutrition_programs SET title = $1, emoji = $2, data = $3, sort = $4, portion_coefficient = $5 WHERE id = $6 RETURNING *',
+      [title, emoji, JSON.stringify(data), sort, portion_coefficient || 1.0, id]
     );
 
     if (result.rows.length === 0) {
