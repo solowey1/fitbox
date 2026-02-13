@@ -135,13 +135,32 @@ END;
 $$ language 'plpgsql';
 
 -- Триггеры для автоматического обновления updated_at
+DROP TRIGGER IF EXISTS update_cities_updated_at ON cities;
 CREATE TRIGGER update_cities_updated_at BEFORE UPDATE ON cities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_nutrition_programs_updated_at ON nutrition_programs;
 CREATE TRIGGER update_nutrition_programs_updated_at BEFORE UPDATE ON nutrition_programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_city_nutrition_programs_updated_at ON city_nutrition_programs;
 CREATE TRIGGER update_city_nutrition_programs_updated_at BEFORE UPDATE ON city_nutrition_programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_prices_updated_at ON prices;
 CREATE TRIGGER update_prices_updated_at BEFORE UPDATE ON prices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_dishes_updated_at ON dishes;
 CREATE TRIGGER update_dishes_updated_at BEFORE UPDATE ON dishes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_ingredients_updated_at ON ingredients;
 CREATE TRIGGER update_ingredients_updated_at BEFORE UPDATE ON ingredients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_dish_ingredients_updated_at ON dish_ingredients;
 CREATE TRIGGER update_dish_ingredients_updated_at BEFORE UPDATE ON dish_ingredients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_nutrition_program_dishes_updated_at ON nutrition_program_dishes;
 CREATE TRIGGER update_nutrition_program_dishes_updated_at BEFORE UPDATE ON nutrition_program_dishes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
 CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_order_items_updated_at ON order_items;
 CREATE TRIGGER update_order_items_updated_at BEFORE UPDATE ON order_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
