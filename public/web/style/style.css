@@ -241,6 +241,7 @@
   z-index: 10;
   width: 100%;
   padding: 0 55px 0 45px;
+  overflow-y: auto;
 }
 
 .choose-wrapper {
@@ -398,11 +399,12 @@
 .content-wrapper {
   height: 680px;
   padding-right: calc(var(--l) * 2);
-  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.program-wrapper {}
+.program-wrapper {
+  padding-bottom: 20px;
+}
 
 .week-wrapper {
   position: relative;
@@ -457,10 +459,6 @@
   outline-width: 2px;
 }
 
-.dish-card-content {
-  
-}
-
 .dish-card-name {
   font-size: 16px;
   font-weight: 500;
@@ -494,8 +492,6 @@
   padding: 50px 100px 50px 50px;
   overflow: hidden;
 }
-
-.program-info-wrapper[data-type="summary"] {}
 
 .program-title-wrapper {
   display: flex;
