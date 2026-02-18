@@ -1,18 +1,18 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 # ─── Цвета ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # ─── Утилиты ─────────────────────────────────────────────────────────────────
-info()    { echo -e "${BLUE}[INFO]${NC}  $*"; }
-success() { echo -e "${GREEN}[OK]${NC}    $*"; }
-warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
-error()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info()    { printf "${BLUE}[INFO]${NC}  %s\n" "$*"; }
+success() { printf "${GREEN}[OK]${NC}    %s\n" "$*"; }
+warn()    { printf "${YELLOW}[WARN]${NC}  %s\n" "$*"; }
+error()   { printf "${RED}[ERROR]${NC} %s\n" "$*"; exit 1; }
 
 # Переходим в директорию скрипта (корень проекта)
 cd "$(dirname "$0")"
@@ -67,7 +67,7 @@ cmd_migrate() {
 }
 
 cmd_logs() {
-  local lines="${1:-100}"
+  lines="${1:-100}"
   info "Логи приложения (последние $lines строк)..."
   docker compose logs --tail="$lines" -f node-app
 }
@@ -80,7 +80,7 @@ cmd_status() {
 
 cmd_help() {
   echo ""
-  echo -e "  ${GREEN}Fitbox — управление приложением${NC}"
+  printf "  ${GREEN}Fitbox — управление приложением${NC}\n"
   echo ""
   echo "  Использование: ./manage.sh <команда>"
   echo ""
