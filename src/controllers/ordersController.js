@@ -28,8 +28,8 @@ const getOrderById = async (req, res) => {
     const itemsResult = await db.query(
       `SELECT oi.*, np.title as program_title, p.days
        FROM order_items oi
-       JOIN nutrition_programs np ON oi.nutrition_program_id = np.id
-       JOIN prices p ON oi.price_id = p.id
+       LEFT JOIN nutrition_programs np ON oi.nutrition_program_id = np.id
+       LEFT JOIN prices p ON oi.price_id = p.id
        WHERE oi.order_id = $1`,
       [id]
     );
@@ -46,88 +46,151 @@ const getOrderById = async (req, res) => {
   }
 };
 
-// Создать заказ
-// TODO: Временно закомментировано для отладки — смотрим, что приходит от Тильды
+// Создать заказ (парсинг данных от Тильды)
 const createOrder = async (req, res) => {
-  console.log('=== Incoming order from Tilda ===');
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Body:', JSON.stringify(req.body, null, 2));
-  console.log('Query:', JSON.stringify(req.query, null, 2));
-  console.log('=================================');
+  const client = await db.pool.connect();
 
-  res.status(200).json({ message: 'Order data received (debug mode)' });
+  try {
+    await client.query('BEGIN');
 
-  // const client = await db.pool.connect();
-  //
-  // try {
-  //   await client.query('BEGIN');
-  //
-  //   const { name, phone, city, address, comment, promocode, current_price, items } = req.body;
-  //
-  //   // Создать заказ
-  //   const orderResult = await client.query(
-  //     `INSERT INTO orders (name, phone, city, address, comment, promocode, current_price)
-  //      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-  //     [name, phone, city, address, comment, promocode, current_price]
-  //   );
-  //
-  //   const orderId = orderResult.rows[0].id;
-  //
-  //   // Добавить элементы заказа
-  //   if (items && items.length > 0) {
-  //     for (const item of items) {
-  //       await client.query(
-  //         `INSERT INTO order_items (order_id, nutrition_program_id, price_id, quantity, price)
-  //          VALUES ($1, $2, $3, $4, $5)`,
-  //         [orderId, item.nutrition_program_id, item.price_id, item.quantity || 1, item.price]
-  //       );
-  //     }
-  //   }
-  //
-  //   await client.query('COMMIT');
-  //
-  //   // Получить полный заказ с элементами
-  //   const fullOrderResult = await db.query(
-  //     `SELECT o.*,
-  //             json_agg(json_build_object(
-  //               'id', oi.id,
-  //               'nutrition_program_id', oi.nutrition_program_id,
-  //               'price_id', oi.price_id,
-  //               'quantity', oi.quantity,
-  //               'price', oi.price,
-  //               'program_title', np.title,
-  //               'days', p.days
-  //             )) as items
-  //      FROM orders o
-  //      LEFT JOIN order_items oi ON o.id = oi.order_id
-  //      LEFT JOIN nutrition_programs np ON oi.nutrition_program_id = np.id
-  //      LEFT JOIN prices p ON oi.price_id = p.id
-  //      WHERE o.id = $1
-  //      GROUP BY o.id`,
-  //     [orderId]
-  //   );
-  //
-  //   res.status(201).json(fullOrderResult.rows[0]);
-  // } catch (error) {
-  //   await client.query('ROLLBACK');
-  //   console.error('Error creating order:', error);
-  //   res.status(500).json({ error: 'Internal server error' });
-  // } finally {
-  //   client.release();
-  // }
+    const body = req.body;
+    const payment = body.payment || {};
+    const products = payment.products || [];
+
+    // Определяем communicate_type и communicate
+    const communicateType = body.communicate || null;
+    let communicate = null;
+    if (communicateType) {
+      // Тильда отправляет поле с именем типа связи в нижнем регистре (telegram, whatsapp и т.д.)
+      communicate = body[communicateType.toLowerCase()] || null;
+    }
+
+    // Создать заказ
+    const orderResult = await client.query(
+      `INSERT INTO orders (
+        name, email, phone, communicate, communicate_type,
+        city, street, house, corpus, flat, entrance, floor,
+        comment, promocode, source, payment_system,
+        tilda_order_id, total_amount, current_price, tilda_raw_data
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+      RETURNING *`,
+      [
+        body.name || null,
+        body.email || null,
+        body.phone || null,
+        communicate,
+        communicateType,
+        body.city || null,
+        body.street || null,
+        body.house || null,
+        body.corpus || null,
+        body.flat || null,
+        body.entrance || null,
+        body.floor || null,
+        body.comment || null,
+        body['Промокод'] || body.promocode || null,
+        body.source || null,
+        body.paymentsystem || null,
+        payment.orderid || null,
+        payment.amount ? parseFloat(payment.amount) : null,
+        payment.amount ? parseFloat(payment.amount) : null,
+        JSON.stringify(body),
+      ]
+    );
+
+    const orderId = orderResult.rows[0].id;
+
+    // Добавить элементы заказа
+    for (const product of products) {
+      const nutritionProgramId = product.sku ? parseInt(product.sku, 10) : null;
+
+      // Найти price_id по nutrition_program_id и кол-ву дней из опций
+      let priceId = null;
+      if (nutritionProgramId && product.options) {
+        const daysOption = product.options.find(
+          (opt) => opt.option === 'Кол-во дней'
+        );
+        if (daysOption) {
+          const days = parseInt(daysOption.variant, 10);
+          const priceResult = await client.query(
+            'SELECT id FROM prices WHERE nutrition_program_id = $1 AND days = $2 LIMIT 1',
+            [nutritionProgramId, days]
+          );
+          if (priceResult.rows.length > 0) {
+            priceId = priceResult.rows[0].id;
+          }
+        }
+      }
+
+      await client.query(
+        `INSERT INTO order_items (order_id, nutrition_program_id, price_id, quantity, price)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [
+          orderId,
+          nutritionProgramId,
+          priceId,
+          product.quantity || 1,
+          product.amount ? parseFloat(product.amount) : null,
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    // Получить полный заказ с элементами
+    const fullOrderResult = await db.query(
+      `SELECT o.*,
+              json_agg(json_build_object(
+                'id', oi.id,
+                'nutrition_program_id', oi.nutrition_program_id,
+                'price_id', oi.price_id,
+                'quantity', oi.quantity,
+                'price', oi.price,
+                'program_title', np.title,
+                'days', p.days
+              )) as items
+       FROM orders o
+       LEFT JOIN order_items oi ON o.id = oi.order_id
+       LEFT JOIN nutrition_programs np ON oi.nutrition_program_id = np.id
+       LEFT JOIN prices p ON oi.price_id = p.id
+       WHERE o.id = $1
+       GROUP BY o.id`,
+      [orderId]
+    );
+
+    res.status(201).json(fullOrderResult.rows[0]);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
 };
 
 // Обновить заказ
 const updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phone, city, address, comment, promocode, current_price } = req.body;
+    const {
+      name, email, phone, communicate, communicate_type,
+      city, street, house, corpus, flat, entrance, floor,
+      comment, promocode, source, payment_system, current_price,
+    } = req.body;
 
     const result = await db.query(
       `UPDATE orders
-       SET name = $1, phone = $2, city = $3, address = $4, comment = $5, promocode = $6, current_price = $7
-       WHERE id = $8 RETURNING *`,
-      [name, phone, city, address, comment, promocode, current_price, id]
+       SET name = $1, email = $2, phone = $3, communicate = $4, communicate_type = $5,
+           city = $6, street = $7, house = $8, corpus = $9, flat = $10,
+           entrance = $11, floor = $12, comment = $13, promocode = $14,
+           source = $15, payment_system = $16, current_price = $17
+       WHERE id = $18 RETURNING *`,
+      [
+        name, email, phone, communicate, communicate_type,
+        city, street, house, corpus, flat, entrance, floor,
+        comment, promocode, source, payment_system, current_price,
+        id,
+      ]
     );
 
     if (result.rows.length === 0) {
