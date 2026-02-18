@@ -3,6 +3,9 @@
 // ====================
 const API_BASE_URL = 'https://app.fitbox.su/api';
 
+// Константы
+const CYCLE_IN_DAYS = 28;
+
 // DOM элементы
 const blockMenu = document.getElementById('menu');
 const blockTarget = document.getElementById('target');
@@ -308,6 +311,114 @@ const addRubleSymbol = (amount) => {
   return `${amount} ₽`;
 };
 
+/**
+ * Создать изображение из DOM-элемента (через html2canvas)
+ */
+const createImageFrom = (selector) => {
+  return new Promise((resolve, reject) => {
+    const element = document.querySelector(selector);
+    if (!element) {
+      reject('Элемент не найден');
+      return;
+    }
+
+    if (typeof html2canvas === 'undefined') {
+      reject('html2canvas не загружен');
+      return;
+    }
+
+    html2canvas(element, { logging: false, useCORS: true })
+      .then(canvas => {
+        resolve(canvas.toDataURL('image/png'));
+      })
+      .catch(error => {
+        reject('Ошибка при создании изображения: ' + error.message);
+      });
+  });
+};
+
+/**
+ * Получить текущую выбранную цену программы
+ */
+const getSelectedPrice = () => {
+  const program = window.currentProgram;
+  if (!program || !program.prices) return null;
+  return program.prices.find(p => p.days === window.selectedDays) || program.prices[0] || null;
+};
+
+/**
+ * Callback добавления товара в корзину
+ */
+const summaryCartBtnCallback = async () => {
+  summaryCartBtnListen(false);
+
+  const program = window.currentProgram;
+  const selectedPrice = getSelectedPrice();
+
+  if (!program || !selectedPrice) {
+    summaryCartBtnListen(true);
+    return;
+  }
+
+  const caloriesText = program.nutrition.caloriesFrom && program.nutrition.caloriesTo
+    ? `${program.nutrition.caloriesFrom}-${program.nutrition.caloriesTo}`
+    : '';
+
+  const productOptions = [
+    { 'option': 'Кол-во дней', 'variant': String(selectedPrice.days) },
+    { 'option': 'Калории', 'variant': caloriesText }
+  ];
+
+  const product = {
+    img: '',
+    lid: '',
+    name: program.title,
+    options: productOptions,
+    pack_label: '',
+    pack_m: '',
+    pack_x: '',
+    pack_y: '',
+    pack_z: '',
+    price: selectedPrice.price,
+    quantity: 1,
+    recid: '',
+    sku: program.id,
+    url: ''
+  };
+
+  const selector = window.innerWidth > 960
+    ? '.summary-program-logo'
+    : '.swiper-slide-active .menu-program-logo';
+
+  try {
+    const productImage = await createImageFrom(selector);
+    product.img = productImage;
+    tcart__addProduct(product);
+  } catch (error) {
+    console.error(error);
+    tcart__addProduct(product);
+  } finally {
+    summaryCartBtnListen(true);
+  }
+};
+
+/**
+ * Управление обработчиком кнопки корзины
+ */
+const summaryCartBtnListen = (enable = true) => {
+  const summaryCartBtn = blockMenu.querySelector('.menu-button.summary-button[name="cart"]');
+  if (!summaryCartBtn) return;
+
+  if (enable) {
+    summaryCartBtn.removeAttribute('disabled');
+    summaryCartBtn.removeEventListener('click', summaryCartBtnCallback);
+    summaryCartBtn.addEventListener('click', summaryCartBtnCallback);
+  } else {
+    summaryCartBtn.setAttribute('disabled', true);
+    summaryCartBtn.removeEventListener('click', summaryCartBtnCallback);
+  }
+};
+
 // ====================
 // РЕНДЕРИНГ UI
 // ====================
@@ -546,7 +657,7 @@ const renderDaysButtons = (program) => {
     label.classList.add('menu-button', 'days');
     label.setAttribute('for', `days-${index + 1}`);
     label.setAttribute('data-days-count', price.days);
-    label.textContent = price.label;
+    // label.textContent = price.label;
     label.appendChild(input);
 
     // Обработчик клика
@@ -628,6 +739,9 @@ const setActiveProgram = (program) => {
 
   // Обновляем summary блок
   updateProgramSummary(program);
+
+  // Активируем кнопку корзины
+  summaryCartBtnListen(true);
 
   // Переключаем слайдер (если он уже не на нужном слайде)
   if (swiperProgramm) {
@@ -787,7 +901,26 @@ const showDishModal = (dish) => {
 
   const closeButton = document.createElement('button');
   closeButton.classList.add('dish-dialog-close');
-  closeButton.innerHTML = '&times;';
+
+  // Создаём элемент SVG
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('height', '24px');
+  svg.setAttribute('viewBox', '0 -960 960 960');
+  svg.setAttribute('width', '24px');
+  svg.setAttribute('fill', '#121212');
+
+  // Создаём элемент path и задаём атрибут d
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M480-424 284-228q-11 11-28 11t-28-11q-11-11-11-28t11-28l196-196-196-196q-11-11-11-28t11-28q11-11 28-11t28 11l196 196 196-196q11-11 28-11t28 11q11 11 11 28t-11 28L536-480l196 196q11 11 11 28t-11 28q-11 11-28 11t-28-11L480-424Z');
+
+  // Добавляем path в SVG
+  svg.appendChild(path);
+
+  // Добавляем SVG в кнопку
+  closeButton.appendChild(svg);
+
+  // Обработчик закрытия диалога
   closeButton.addEventListener('click', () => {
     dialog.close();
     dialog.remove();
@@ -907,7 +1040,20 @@ const showDishModal = (dish) => {
  */
 const getDayDateText = (startDate, weekNumber, dayNumber) => {
   const start = new Date(startDate);
-  const dayToAdd = (weekNumber - 1) * 7 + dayNumber - 1;
+  start.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Вычисляем количество дней с момента старта
+  const diffTime = today.getTime() - start.getTime();
+  const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
+  // Количество полных 4-недельных циклов (CYCLE_IN_DAYS по умолчанию 28 дней)
+  const fullCycles = Math.floor(diffDays / CYCLE_IN_DAYS);
+
+  // Вычисляем день с учётом текущего цикла
+  const dayToAdd = fullCycles * CYCLE_IN_DAYS + (weekNumber - 1) * 7 + dayNumber - 1;
 
   const currentDate = new Date(start);
   currentDate.setDate(start.getDate() + dayToAdd);

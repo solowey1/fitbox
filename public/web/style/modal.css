@@ -29,13 +29,15 @@
 
 .dish-dialog-close {
   position: absolute;
-  top: 15px;
-  right: 15px;
+  top: 16px;
+  right: 16px;
   width: 32px;
   height: 32px;
+  padding: 6px;
   box-sizing: border-box;
-  border: none;
+  color: #666;
   background: #f5f5f5;
+  border: none;
   border-radius: 50%;
   font-size: 24px;
   line-height: 1;
@@ -44,13 +46,12 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s ease;
-  color: #666;
 }
 
 .dish-dialog-close:hover {
+  color: #333;
   background: #e0e0e0;
   transform: rotate(90deg);
-  color: #333;
 }
 
 .dish-dialog-title {
@@ -131,9 +132,9 @@
 /* Адаптивность */
 @media (max-width: 768px) {
   #dish-dialog {
-    width: 95%;
+    width: 80%;
     padding: 20px;
-    max-height: 85vh;
+    max-height: 90vh;
   }
 
   .dish-dialog-title {

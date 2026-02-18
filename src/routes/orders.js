@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
+const orderMiddleware = require('../middleware/orderMiddleware');
 const {
   getAllOrders,
   getOrderById,
@@ -13,9 +14,8 @@ const {
 router.get('/', getAllOrders);
 router.get('/:id', getOrderById);
 
-// POST для создания заказа может быть публичным (для фронтенда)
-// Если хотите защитить - добавьте authMiddleware
-router.post('/', createOrder);
+// POST для создания заказа — защищён API-ключом Тильды
+router.post('/', orderMiddleware, createOrder);
 
 // Защищенные роуты - требуют API ключ (только для администрирования)
 router.put('/:id', authMiddleware, updateOrder);
