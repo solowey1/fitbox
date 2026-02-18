@@ -6,7 +6,7 @@
  * Клиент должен передавать ключ в заголовке: X-Tilda-Api-Key: <ключ>
  */
 
-const orderMiddleware = (req, res, next) => {
+const tildaMiddleware = (req, res, next) => {
   const serverKey = process.env.TILDA_API_KEY;
 
   if (!serverKey) {
@@ -44,4 +44,4 @@ const orderMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = orderMiddleware;
+module.exports = tildaMiddleware;

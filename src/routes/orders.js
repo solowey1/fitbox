@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const orderMiddleware = require('../middleware/orderMiddleware');
+const tildaMiddleware = require('../middleware/tildaMiddleware');
 const {
   getAllOrders,
   getOrderById,
@@ -10,12 +10,10 @@ const {
   deleteOrder,
 } = require('../controllers/ordersController');
 
-// Публичные роуты (GET) - доступны без аутентификации
-router.get('/', getAllOrders);
-router.get('/:id', getOrderById);
-
-// POST для создания заказа — защищён API-ключом Тильды
-router.post('/', orderMiddleware, createOrder);
+// Защищенные роуты - требуют API ключ Тильды
+router.get('/', tildaMiddleware, getAllOrders);
+router.get('/:id', tildaMiddleware, getOrderById);
+router.post('/', tildaMiddleware, createOrder);
 
 // Защищенные роуты - требуют API ключ (только для администрирования)
 router.put('/:id', authMiddleware, updateOrder);
