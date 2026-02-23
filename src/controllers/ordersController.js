@@ -48,12 +48,18 @@ const getOrderById = async (req, res) => {
 
 // Создать заказ (парсинг данных от Тильды)
 const createOrder = async (req, res) => {
+  const body = req.body;
+
+  // Тестовый запрос от Тильды — отвечаем 200
+  if (!body.name && !body.phone && !body.payment) {
+    return res.json({ success: true });
+  }
+
   const client = await db.pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const body = req.body;
     const payment = body.payment || {};
     const products = payment.products || [];
 
