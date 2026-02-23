@@ -111,7 +111,8 @@ const createOrder = async (req, res) => {
           (opt) => opt.option === 'Кол-во дней'
         );
         if (daysOption) {
-          const days = parseInt(daysOption.variant, 10);
+          const parsed = parseInt(String(daysOption.variant).replace(/\D/g, ''), 10);
+          const days = (!isNaN(parsed) && parsed > 0) ? parsed : 1;
           const priceResult = await client.query(
             'SELECT id FROM prices WHERE nutrition_program_id = $1 AND days = $2 LIMIT 1',
             [nutritionProgramId, days]
