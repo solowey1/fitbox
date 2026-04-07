@@ -955,7 +955,7 @@ const showDishModal = (dish) => {
 
   const ingredientsText = document.createElement('p');
   ingredientsText.classList.add('dish-dialog-ingredients');
-  ingredientsText.textContent = dish.ingredientsText || 'Нет информации';
+  ingredientsText.textContent = dish.ingredients.join(', ') ||dish.ingredientsText || 'Нет информации';
 
   ingredientsSection.appendChild(ingredientsTitle);
   ingredientsSection.appendChild(ingredientsText);

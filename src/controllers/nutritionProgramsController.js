@@ -82,8 +82,8 @@ const getNutritionProgramWithPrices = async (req, res) => {
     }
 
     const pricesResult = await db.query(
-      'SELECT * FROM prices WHERE nutrition_program_id = $1 ORDER BY days ASC',
-      [id]
+      'SELECT * FROM prices WHERE nutrition_program_id = $1 AND city_id = $2 ORDER BY days ASC',
+      [id, city_id]
     );
 
     const response = {

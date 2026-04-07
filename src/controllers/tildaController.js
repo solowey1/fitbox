@@ -61,7 +61,7 @@ const getTildaMenu = async (req, res) => {
     // Находим текущий город
     const cityData = cities.find(c => c.title === currentCity) || cities[0];
 
-    // 2. Получаем все программы питания с ценами
+    // 2. Получаем все программы питания с ценами по всем городам
     const programsResult = await db.query(`
       SELECT
         np.id,
@@ -91,10 +91,11 @@ const getTildaMenu = async (req, res) => {
         ) as cities,
         COALESCE(
           (
-            SELECT json_agg(price_obj ORDER BY (price_obj->>'days')::int)
+            SELECT json_agg(price_obj ORDER BY (price_obj->>'cityId')::int, (price_obj->>'days')::int)
             FROM (
               SELECT jsonb_build_object(
                 'id', p.id,
+                'cityId', p.city_id,
                 'days', p.days,
                 'price', p.price,
                 'oldPrice', p.old_price
@@ -138,14 +139,19 @@ const getTildaMenu = async (req, res) => {
           fats: data.fats || null,
           carbohydrates: data.carbohydrates || null,
         },
-        prices: (program.prices || []).map(price => ({
-          id: price.id,
-          days: price.days,
-          price: parseFloat(price.price),
-          oldPrice: price.oldPrice ? parseFloat(price.oldPrice) : null,
-          label: price.days === 1 ? 'Пробный день' : `${price.days} дней`,
-          pricePerDay: Math.ceil(parseFloat(price.price) / price.days)
-        })),
+        prices: (program.prices || []).reduce((acc, price) => {
+          const cId = price.cityId;
+          if (!acc[cId]) acc[cId] = [];
+          acc[cId].push({
+            id: price.id,
+            days: price.days,
+            price: parseFloat(price.price),
+            oldPrice: price.oldPrice ? parseFloat(price.oldPrice) : null,
+            label: price.days === 1 ? 'Пробный день' : `${price.days} дней`,
+            pricePerDay: Math.ceil(parseFloat(price.price) / price.days)
+          });
+          return acc;
+        }, {}),
         cities: program.cities || [],
         // Дата старта для текущего города
         startedAt: cityData ? cityData.startedAt : null
