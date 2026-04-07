@@ -106,11 +106,23 @@ const createOrder = async (req, res) => {
 
     const orderId = orderResult.rows[0].id;
 
+    // Найти city_id по названию города из заказа
+    let orderCityId = null;
+    if (body.city) {
+      const cityResult = await client.query(
+        'SELECT id FROM cities WHERE title = $1 LIMIT 1',
+        [body.city]
+      );
+      if (cityResult.rows.length > 0) {
+        orderCityId = cityResult.rows[0].id;
+      }
+    }
+
     // Добавить элементы заказа
     for (const product of products) {
       const nutritionProgramId = product.sku ? parseInt(product.sku, 10) : null;
 
-      // Найти price_id по nutrition_program_id и кол-ву дней из опций
+      // Найти price_id по nutrition_program_id, кол-ву дней и городу
       let priceId = null;
       if (nutritionProgramId && product.options) {
         const daysOption = product.options.find(
@@ -120,8 +132,8 @@ const createOrder = async (req, res) => {
           const parsed = parseInt(String(daysOption.variant).replace(/\D/g, ''), 10);
           const days = (!isNaN(parsed) && parsed > 0) ? parsed : 1;
           const priceResult = await client.query(
-            'SELECT id FROM prices WHERE nutrition_program_id = $1 AND days = $2 LIMIT 1',
-            [nutritionProgramId, days]
+            'SELECT id FROM prices WHERE nutrition_program_id = $1 AND days = $2 AND city_id = $3 LIMIT 1',
+            [nutritionProgramId, days, orderCityId]
           );
           if (priceResult.rows.length > 0) {
             priceId = priceResult.rows[0].id;

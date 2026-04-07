@@ -6,6 +6,12 @@ const API_BASE_URL = 'https://app.fitbox.su/api';
 // Константы
 const CYCLE_IN_DAYS = 28;
 
+/**
+ * Константы для кэширования
+ */
+const CACHE_TTL = 60 * 60 * 1000; // 60 минут в миллисекундах
+const CACHE_PREFIX = 'fitbox_cache_';
+
 // DOM элементы
 const blockMenu = document.getElementById('menu');
 const blockTarget = document.getElementById('target');
@@ -138,12 +144,6 @@ const getProgramDishes = async (programId, week = null, day = null) => {
 // ====================
 // УТИЛИТЫ
 // ====================
-
-/**
- * Константы для кэширования
- */
-const CACHE_TTL = 60 * 60 * 1000; // 60 минут в миллисекундах
-const CACHE_PREFIX = 'fitbox_cache_';
 
 /**
  * Получить данные из localStorage кэша
@@ -338,12 +338,25 @@ const createImageFrom = (selector) => {
 };
 
 /**
+ * Получить массив цен программы для текущего города
+ */
+const getProgramPrices = (program) => {
+  if (!program || !program.prices) return [];
+  const cityId = window.menuData?.currentCity?.id;
+  if (cityId && program.prices[cityId]) return program.prices[cityId];
+  // Fallback: первый доступный город
+  const keys = Object.keys(program.prices);
+  return keys.length > 0 ? program.prices[keys[0]] : [];
+};
+
+/**
  * Получить текущую выбранную цену программы
  */
 const getSelectedPrice = () => {
   const program = window.currentProgram;
-  if (!program || !program.prices) return null;
-  return program.prices.find(p => p.days === window.selectedDays) || program.prices[0] || null;
+  const prices = getProgramPrices(program);
+  if (prices.length === 0) return null;
+  return prices.find(p => p.days === window.selectedDays) || prices[0] || null;
 };
 
 /**
@@ -635,17 +648,20 @@ const renderDaysButtons = (program) => {
   // Очищаем существующие кнопки
   daysForm.innerHTML = '';
 
+  // Получаем цены для текущего города
+  const prices = getProgramPrices(program);
+
   // Пытаемся найти сохраненный выбор в текущей программе
   let selectedPrice = null;
   if (window.selectedDays) {
-    selectedPrice = program.prices.find(p => p.days === window.selectedDays);
+    selectedPrice = prices.find(p => p.days === window.selectedDays);
   }
   // Если не нашли или не было выбора, берем первый
-  if (!selectedPrice && program.prices.length > 0) {
-    selectedPrice = program.prices[0];
+  if (!selectedPrice && prices.length > 0) {
+    selectedPrice = prices[0];
   }
 
-  program.prices.forEach((price, index) => {
+  prices.forEach((price, index) => {
     const input = document.createElement('input');
     input.type = 'radio';
     input.name = 'days';
@@ -955,7 +971,7 @@ const showDishModal = (dish) => {
 
   const ingredientsText = document.createElement('p');
   ingredientsText.classList.add('dish-dialog-ingredients');
-  ingredientsText.textContent = dish.ingredientsText || 'Нет информации';
+  ingredientsText.textContent = dish.ingredients.join(', ') ||dish.ingredientsText || 'Нет информации';
 
   ingredientsSection.appendChild(ingredientsTitle);
   ingredientsSection.appendChild(ingredientsText);
