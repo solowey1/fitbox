@@ -1,22 +1,33 @@
+networks:
+  common-network:
+    name: budibase_default
+    external: true
+
 services:
   # Сервис PostgreSQL
   fitbox-postgres:
     image: postgres:16
     container_name: postgres-db
     environment:
-      POSTGRES_DB: ${DB_NAME:-fitbox}
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_strong_password}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     ports:
-      - "5432:5432"
+      # Только localhost. Доступ снаружи — через SSH-туннель (Navicat: вкладка SSH).
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # (опционально) скрипты инициализации
+      # init.sql отрабатывает ТОЛЬКО на пустом volume. База уже создана —
+      # строка ниже ни на что не влияет. Удалите её, если ./init.sql не существует
+      # (иначе Docker создаст директорию с таким именем).
+      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
     networks:
       - common-network
 
@@ -31,72 +42,51 @@ services:
     environment:
       DB_HOST: fitbox-postgres
       DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME:-fitbox}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-your_strong_password}
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       PORT: 3000
-      CORS_ORIGIN: ${CORS_ORIGIN:-*}
-      NODE_ENV: ${NODE_ENV:-development}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3010}
+      NODE_ENV: ${NODE_ENV:-production}
     depends_on:
-      - fitbox-postgres
+      fitbox-postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      # curl в образе нет (node:*-alpine / -slim). Используем сам node.
+      # Порт ВНУТРИ контейнера — 3000, не 3010.
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 10s
       retries: 3
-  
-  # Сервис Baserow
-  # baserow:
-  #   container_name: baserow
-  #   image: baserow/baserow:2.0.6
-  #   env_file:
-  #     - ./baserow/.env
-  #   environment:
-  #     BASEROW_PUBLIC_URL: 'http://localhost'
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - baserow_data:/baserow/data
-  #   restart: unless-stopped
-  #   depends_on:
-  #     fitbox-postgres:
-  #       condition: service_healthy
+      start_period: 30s
+    networks:
+      - common-network
 
-  # nocodb:
-  #   container_name: nocodb
-  #   image: nocodb/nocodb:latest
-  #   environment:
-  #     NC_DB: "pg://fitbox-postgres:5432?u=${DB_USER:-postgres}&p=${DB_PASSWORD:-your_strong_password}&d=nocodb"
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     fitbox-postgres:
-  #       condition: service_healthy
-
-  # Сервис для выполнения миграций
+  # Миграции: не запускаются при обычном `docker compose up -d`.
+  # Запуск вручную: docker compose --profile tools run --rm migrate
   migrate:
     build: .
     command: node scripts/migrate.js
+    profiles: ["tools"]
     env_file:
       - .env
     environment:
       DB_HOST: fitbox-postgres
       DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME:-fitbox}
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-your_strong_password}
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     depends_on:
       fitbox-postgres:
         condition: service_healthy
     restart: "no"
+    networks:
+      - common-network
 
-# Объём для данных PostgreSQL
 volumes:
   postgres_data:
-  baserow_data:
-
-networks:
-  common-network:
-    driver: bridge
