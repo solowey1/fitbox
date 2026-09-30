@@ -108,7 +108,7 @@ const getTildaMenu = async (req, res) => {
         ) as prices,
         COALESCE(
           (
-            SELECT COUNT(DISTINCT dish_number)
+            SELECT COUNT(*)
             FROM nutrition_program_dishes npd
             WHERE npd.nutrition_program_id = np.id
               AND npd.day_of_week = 1
