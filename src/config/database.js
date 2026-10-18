@@ -1,5 +1,9 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
+
+// DATE отдаём строкой 'ГГГГ-ММ-ДД': по умолчанию pg превращает её в полночь
+// по часовому поясу сервера, и в JSON дата съезжает на день
+types.setTypeParser(types.builtins.DATE, (value) => value);
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
