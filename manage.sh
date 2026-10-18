@@ -49,7 +49,8 @@ cmd_update() {
 
   echo ""
   info "Пересборка контейнеров..."
-  docker compose build
+  # --profile tools: без него сервис migrate (профиль tools) не пересобирается
+  docker compose --profile tools build
   success "Контейнеры собраны"
 
   echo ""
@@ -61,6 +62,10 @@ cmd_update() {
 }
 
 cmd_migrate() {
+  info "Сборка образа миграций..."
+  # docker compose run не пересобирает образ: без этого запустится migrate.js из старой сборки
+  docker compose --profile tools build migrate
+
   info "Запуск миграций..."
   docker compose run --rm migrate node scripts/migrate.js "$@"
   success "Миграции выполнены"
