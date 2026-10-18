@@ -352,11 +352,8 @@
     injectStyles();
 
     var box = document.createElement('div');
-    box.className = 'ncdm-test-box';
-
-    // Тильда задаёт шрифт классам полей, а не контейнеру формы — берём его у подписи поля
-    var fontSource = form.querySelector('.t-input-title, .t-descr, .t-text, .t-input');
-    if (fontSource) box.style.fontFamily = window.getComputedStyle(fontSource).fontFamily;
+    // t-text — шрифт проекта Тильды: сама форма шрифт не задаёт
+    box.className = 'ncdm-test-box t-text';
 
     var head = document.createElement('div');
     head.className = 'ncdm-test-box__head';
