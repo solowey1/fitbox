@@ -4,7 +4,8 @@ const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 const {
   getTildaMenu,
   getProgramDishes,
-  getDishDetails
+  getDishDetails,
+  getConstructorMenu
 } = require('../controllers/tildaController');
 
 /**
@@ -24,5 +25,9 @@ router.get('/menu/:programId/dishes', cacheMiddleware(900), getProgramDishes);
 // Получить детальную информацию о блюде
 // Кэш: 30 минут (детали блюда меняются очень редко)
 router.get('/dishes/:dishId', cacheMiddleware(1800), getDishDetails);
+
+// Блюда и приёмы пищи для конструктора «Собери своё меню»
+// Кэш: 10 минут
+router.get('/constructor', cacheMiddleware(600), getConstructorMenu);
 
 module.exports = router;

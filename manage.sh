@@ -62,7 +62,7 @@ cmd_update() {
 
 cmd_migrate() {
   info "Запуск миграций..."
-  docker compose run --rm migrate
+  docker compose run --rm migrate node scripts/migrate.js "$@"
   success "Миграции выполнены"
 }
 
@@ -90,6 +90,8 @@ cmd_help() {
   echo "    restart     Перезапустить приложение"
   echo "    update      Обновить код из GitHub, пересобрать и перезапустить"
   echo "    migrate     Запустить миграции БД"
+  echo "                  --dry-run       показать, что будет применено"
+  echo "                  --baseline=NNN  отметить миграции <= NNN применёнными (один раз для существующей БД)"
   echo "    logs [N]    Показать логи приложения (по умолчанию 100 строк)"
   echo "    status      Показать статус контейнеров"
   echo "    help        Показать эту справку"
@@ -103,7 +105,7 @@ case "${1:-}" in
   stop)    cmd_stop ;;
   restart) cmd_restart ;;
   update)  cmd_update ;;
-  migrate) cmd_migrate ;;
+  migrate) shift; cmd_migrate "$@" ;;
   logs)    cmd_logs "${2:-100}" ;;
   status)  cmd_status ;;
   help)    cmd_help ;;

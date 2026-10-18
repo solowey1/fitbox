@@ -27,7 +27,7 @@ const getTildaMenu = async (req, res) => {
       'kzn': 'Казань',
       'smr': 'Самара',
       'tlt': 'Тольятти',
-      'dmt': 'Дмитровград',
+      'dmt': 'Димитровград',
       '': 'Ульяновск'
     };
 
@@ -110,9 +110,11 @@ const getTildaMenu = async (req, res) => {
           (
             SELECT COUNT(*)
             FROM nutrition_program_dishes npd
+            JOIN dishes d ON d.id = npd.dish_id
             WHERE npd.nutrition_program_id = np.id
               AND npd.day_of_week = 1
               AND npd.week_number = 1
+              AND d.in_program
           ),
           0
         ) as dishes_per_day
@@ -300,6 +302,7 @@ const getProgramDishes = async (req, res) => {
       FROM nutrition_program_dishes npd
       JOIN dishes d ON npd.dish_id = d.id
       WHERE npd.nutrition_program_id = $1
+        AND d.in_program -- снятый флаг = черновик, в меню программы не показываем
     `;
 
     const params = [programId, portionCoefficient];
@@ -477,8 +480,129 @@ const getDishDetails = async (req, res) => {
   }
 };
 
+/**
+ * Данные для конструктора «Собери своё меню»
+ * GET /api/tilda/constructor
+ *
+ * Возвращает:
+ * - Приёмы пищи, в которых есть хотя бы одно блюдо (пустые разделы на сайте не показываются)
+ * - Блюда конструктора: in_constructor, заполнены цена и вес, указан хотя бы один приём
+ *
+ * КБЖУ на 100 г считается по ингредиентам, КБЖУ порции — пропорционально весу блюда (dishes.weight)
+ */
+const getConstructorMenu = async (req, res) => {
+  try {
+    const result = await db.query(`
+      WITH visible AS (
+        SELECT id, title, image, price, price_old, weight
+        FROM dishes
+        WHERE in_constructor
+          AND price IS NOT NULL
+          AND weight IS NOT NULL
+      ),
+      dish_types AS (
+        SELECT dmt.dish_id, array_agg(DISTINCT mt.slug) AS meal_types
+        FROM dish_meal_types dmt
+        JOIN meal_types mt ON mt.id = dmt.meal_type_id
+        WHERE dmt.dish_id IN (SELECT id FROM visible)
+        GROUP BY dmt.dish_id
+      ),
+      dish_nutrition AS (
+        SELECT
+          di.dish_id,
+          SUM(di.quantity) AS ingredients_weight,
+          SUM(i.calories * di.quantity / 100) AS calories,
+          SUM(i.proteins * di.quantity / 100) AS proteins,
+          SUM(i.fats * di.quantity / 100) AS fats,
+          SUM(i.carbohydrates * di.quantity / 100) AS carbohydrates,
+          json_agg(i.title ORDER BY di.id) AS ingredients
+        FROM dish_ingredients di
+        JOIN ingredients i ON i.id = di.ingredient_id
+        WHERE di.dish_id IN (SELECT id FROM visible)
+        GROUP BY di.dish_id
+      )
+      SELECT v.*, dt.meal_types, dn.ingredients_weight, dn.calories, dn.proteins,
+             dn.fats, dn.carbohydrates, dn.ingredients
+      FROM visible v
+      JOIN dish_types dt ON dt.dish_id = v.id
+      LEFT JOIN dish_nutrition dn ON dn.dish_id = v.id
+      ORDER BY v.title
+    `);
+
+    const dishes = result.rows.map(row => {
+      const weight = parseInt(row.weight);
+      const ingredientsWeight = parseFloat(row.ingredients_weight) || 0;
+
+      // На 100 г: суммарное КБЖУ ингредиентов / суммарный вес ингредиентов
+      const per100 = (value) => ingredientsWeight > 0
+        ? (parseFloat(value) || 0) / ingredientsWeight * 100
+        : null;
+
+      const nutrition100 = {
+        calories: per100(row.calories),
+        proteins: per100(row.proteins),
+        fats: per100(row.fats),
+        carbohydrates: per100(row.carbohydrates)
+      };
+
+      const round = (value, factor = 1) => value === null ? null : Math.round(value * factor) / factor;
+      const portion = (value) => value === null ? null : value * weight / 100;
+
+      return {
+        id: row.id,
+        sku: `D${row.id}`,
+        title: row.title,
+        image: row.image || '',
+        price: parseFloat(row.price),
+        oldPrice: row.price_old !== null ? parseFloat(row.price_old) : null,
+        weight: weight,
+        mealTypes: row.meal_types,
+        ingredients: row.ingredients || [],
+        // null — у блюда не заполнена граммовка ингредиентов
+        nutrition: ingredientsWeight > 0 ? {
+          per100: {
+            calories: round(nutrition100.calories),
+            proteins: round(nutrition100.proteins, 10),
+            fats: round(nutrition100.fats, 10),
+            carbohydrates: round(nutrition100.carbohydrates, 10)
+          },
+          portion: {
+            calories: round(portion(nutrition100.calories)),
+            proteins: round(portion(nutrition100.proteins), 10),
+            fats: round(portion(nutrition100.fats), 10),
+            carbohydrates: round(portion(nutrition100.carbohydrates), 10)
+          }
+        } : null
+      };
+    });
+
+    // Только приёмы, в которых есть блюда
+    const usedMealTypes = new Set(dishes.flatMap(dish => dish.mealTypes));
+    const mealTypesResult = await db.query(
+      'SELECT id, slug, title, sort FROM meal_types ORDER BY sort, id'
+    );
+    const mealTypes = mealTypesResult.rows.filter(type => usedMealTypes.has(type.slug));
+
+    res.json({
+      mealTypes,
+      dishes,
+      meta: {
+        totalDishes: dishes.length,
+        generatedAt: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка при получении данных конструктора:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Не удалось получить блюда конструктора'
+    });
+  }
+};
+
 module.exports = {
   getTildaMenu,
   getProgramDishes,
-  getDishDetails
+  getDishDetails,
+  getConstructorMenu
 };
