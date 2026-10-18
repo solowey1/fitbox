@@ -68,7 +68,8 @@
     var style = document.createElement('style');
     style.id = 'ncdm-cal-styles';
     style.textContent = [
-      '.litepicker{z-index:' + CONFIG.zIndex + ' !important;font-family:inherit !important;',
+      // шрифт проекта даёт класс t-text (см. setup в attach)
+      '.litepicker{z-index:' + CONFIG.zIndex + ' !important;',
         '--litepicker-is-start-color-bg:' + CONFIG.accent + ';',
         '--litepicker-is-end-color-bg:' + CONFIG.accent + ';',
         '--litepicker-is-today-color:' + CONFIG.accent + ';',
@@ -118,7 +119,7 @@
     var hint = input.parentNode.querySelector('.ncdm-dp-hint');
     if (!hint) {
       hint = document.createElement('div');
-      hint.className = 'ncdm-dp-hint';
+      hint.className = 'ncdm-dp-hint t-text'; // t-text — шрифт проекта Тильды
       input.parentNode.appendChild(hint);
     }
     return hint;
@@ -241,6 +242,9 @@
         // повторный вход отсекается внутри commit(), иначе Litepicker
         // поймает свой же 'change' и уронит стек рекурсией
         p.on('selected', function () { commit(input); });
+
+        // календарь вставляется в body, где у Тильды шрифт не задан — t-text даёт шрифт проекта
+        p.on('render', function (ui) { ui.classList.add('t-text'); });
       }
     });
 
@@ -344,7 +348,7 @@
   scan();
 
   window.NCDM_DELIVERY_PICKER = {
-    VERSION: 'fitbox-1.0.0', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
+    VERSION: 'fitbox-1.0.1', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
     CONFIG: CONFIG,
     scan: scan,
     updateSubmit: updateSubmit,

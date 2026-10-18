@@ -1,12 +1,15 @@
 /*!
  * delivery-cutoff-tester.js
  * ТЕСТОВЫЙ скрипт: подмена текущего момента (даты и времени).
- *   input[name="cutoff-date"] — какой день считать сегодняшним
- *   input[name="cutoff-time"] — сколько сейчас времени
  * Подменённое время считается местным временем каждого города.
  * Отсечка при этом остаётся боевой (CONFIG.defaults.cutoffHour в delivery-date.js).
  *
- * На боевую страницу не ставить. Подключать ПОСЛЕ delivery-date.js и delivery-datepicker.js
+ * Тестовый блок сам встраивается в форму любой корзины Тильды (T706):
+ * всплывающей и полноэкранной (двухстадийной) — перед полем даты доставки,
+ * а если его нет — в начало формы. Свои поля создаются без name и в заказ не уходят.
+ * Если в форме есть поля Тильды cutoff-date / cutoff-time — используются они.
+ *
+ * На боевую страницу не ставить. Подключать ПОСЛЕ delivery-date.js
  * Проверка в консоли: NCDM_CUTOFF_TESTER.VERSION
  */
 (function () {
@@ -20,41 +23,48 @@
   var CORE = window.NCDM_DELIVERY;
 
   var CONFIG = {
-    timeSelector: 'input[name="cutoff-time"]',
-    dateSelector: 'input[name="cutoff-date"]',
+    timeSelector: 'input[name="cutoff-time"], input[data-ncdm-cutoff="time"]',
+    dateSelector: 'input[name="cutoff-date"], input[data-ncdm-cutoff="date"]',
+
+    // Перед этим полем встаёт тестовый блок
+    anchorSelector: 'input[name="date"], input[data-delivery-date]',
+    // Формы корзины, в которые встраиваться, даже если поля даты нет
+    formSelector: '.t706 form',
+
     storeKeyTime: 'ncdm-cutoff-time',
     storeKeyDate: 'ncdm-cutoff-date',
     showPanel: true,
 
     // Обёртка вокруг тестовых полей, чтобы посетитель понимал, что это не часть заказа
     box: {
-      enabled: true,
       title: 'Тестовый блок',
-      subtitle: 'Подставьте любые дату и время — скрипт посчитает так, будто сейчас именно они по местному времени города. Отсечка остаётся боевой.',
+      subtitle: 'Подставьте любые дату и время — скрипт посчитает так, будто сейчас именно они по местному времени города. Пустое поле — реальное значение. Отсечка остаётся боевой.',
       resetLabel: 'Сбросить на реальное сейчас',
+      dateLabel: 'Какой день считать сегодняшним',
+      timeLabel: 'Сколько сейчас времени',
 
-      // Палитра. Нарочно нейтрально-холодная: жёлтый — фирменный цвет сайта,
-      // тестовый блок не должен с ним конкурировать.
+      // Палитра под светлую корзину. Нарочно холодная: не путается с элементами заказа
       theme: {
-        background: 'rgba(0, 0, 0, 0.28)',        // затемнение поверх фона страницы
-        border: 'rgba(255, 255, 255, 0.16)',
-        accent: '#8ab4f8',
-        text: '#e8eaed',
-        muted: 'rgba(232, 234, 237, 0.62)',
-        inputBg: 'rgba(255, 255, 255, 0.06)',
-        inputBorder: 'rgba(255, 255, 255, 0.24)',
-        panelBg: 'rgba(0, 0, 0, 0.32)',
-        error: '#ff8a80'
+        background: '#f2f6fc',
+        border: '#b9c7dc',
+        accent: '#1a56db',
+        text: '#1f2933',
+        muted: '#5b6675',
+        inputBg: '#ffffff',
+        inputBorder: '#b9c7dc',
+        panelBg: '#ffffff',
+        error: '#c62828'
       }
     }
   };
 
   var WEEKDAYS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
-  // Текущее состояние подмены
+  // Текущее состояние подмены: null — реальное значение
   var state = { time: null, date: null };
+  var errors = { time: null, date: null };
 
-  /** Город для полей по умолчанию: выбранный в корзине или первый из настроек. */
+  /** Город для подсказок по умолчанию: выбранный в корзине или первый из настроек. */
   function defaultCity() {
     return CORE.getSelectedCity() || Object.keys(CORE.CONFIG.cities)[0];
   }
@@ -113,7 +123,7 @@
 
   // ==================== РАЗБОР ЗНАЧЕНИЙ ====================
 
-  /** Понимает '11:00', '11.30', '9' -> { h, m } */
+  /** Понимает '14:00', '13.30', '9' -> { h, m } */
   function parseTime(str) {
     var m = /^\s*(\d{1,2})\s*(?:[:.\s]\s*(\d{1,2}))?\s*$/.exec(String(str == null ? '' : str));
     if (!m) return null;
@@ -144,27 +154,62 @@
 
   function weekdayOf(ts) { return WEEKDAYS[new Date(ts).getUTCDay()]; }
 
-  // ==================== ПРИМЕНЕНИЕ ====================
-
-  /**
-   * Поля задают подменённое «сейчас», отсечка остаётся боевой.
-   * Ядро сравнивает now.hour < cutoffHour — при целой отсечке это точно:
-   * 13:59 -> 13 < 14 (до), 14:00 -> 14 < 14 неверно (после).
-   */
-  function applyState() {
-    if (window.NCDM_DELIVERY_PICKER) window.NCDM_DELIVERY_PICKER.scan();
-
-    renderPanel();
+  /** «30.09» */
+  function fmtShort(ts) {
+    var d = new Date(ts);
+    return pad(d.getUTCDate()) + '.' + pad(d.getUTCMonth() + 1);
   }
 
-  // ==================== ВЫДЕЛЕНИЕ ТЕСТОВОГО БЛОКА ====================
+  function padRight(str, len) {
+    while (str.length < len) str += ' ';
+    return str;
+  }
+
+  // ==================== ПРИМЕНЕНИЕ ====================
+
+  function applyState() {
+    if (window.NCDM_DELIVERY_PICKER) window.NCDM_DELIVERY_PICKER.scan();
+    renderPanels();
+    renderPlaceholders();
+  }
+
+  /** Значение из поля -> состояние. kind: 'time' | 'date' */
+  function readInput(kind, input, persist) {
+    var raw = String(input.value || '').trim();
+    var storeKey = kind === 'time' ? CONFIG.storeKeyTime : CONFIG.storeKeyDate;
+
+    if (!raw) { // пусто — работаем от реального значения
+      state[kind] = null;
+      errors[kind] = null;
+      if (persist) save(storeKey, null);
+    } else {
+      var value = kind === 'time' ? parseTime(raw) : parseDate(raw);
+      errors[kind] = value == null ? raw : null;
+
+      if (value != null) {
+        state[kind] = value;
+        if (persist) save(storeKey, kind === 'time' ? fmtTime(value) : CORE.toISO(value));
+      }
+    }
+
+    // в других корзинах на странице — то же значение
+    var selector = kind === 'time' ? CONFIG.timeSelector : CONFIG.dateSelector;
+    Array.prototype.forEach.call(document.querySelectorAll(selector), function (other) {
+      if (other !== input) other.value = input.value;
+    });
+
+    applyState();
+  }
+
+  // ==================== СТИЛИ ====================
 
   function injectStyles() {
-    if (document.getElementById('ncdm-test-box-styles')) return;
+    // свой id: стили других версий тестера на странице не должны подменять эти
+    if (document.getElementById('ncdm-test-box-styles-fitbox')) return;
 
     var t = CONFIG.box.theme;
     var style = document.createElement('style');
-    style.id = 'ncdm-test-box-styles';
+    style.id = 'ncdm-test-box-styles-fitbox';
 
     // !important нужен точечно: Тильда пишет цвет и рамку полей инлайном,
     // а инлайн-стиль обычным правилом не перебить. Всё ограничено .ncdm-test-box,
@@ -172,63 +217,107 @@
     style.textContent = [
       '.ncdm-test-box{width:100%;flex:1 1 100%;box-sizing:border-box;',
         'background:' + t.background + ';border:1px dashed ' + t.border + ';',
-        'border-radius:12px;padding:18px 20px;margin:0 0 22px;}',
+        'border-radius:12px;padding:18px 20px;margin:0 0 22px;color:' + t.text + ';}',
 
       '.ncdm-test-box__head{display:flex;align-items:center;justify-content:space-between;',
         'gap:12px;flex-wrap:wrap;margin-bottom:6px;}',
-      '.ncdm-test-box__title{font:600 12px/1.3 inherit;letter-spacing:.08em;',
+      '.ncdm-test-box__title{font-weight:600;font-family:inherit;font-size:12px;line-height:1.3;letter-spacing:.08em;',
         'text-transform:uppercase;color:' + t.accent + ';}',
-      '.ncdm-test-box__subtitle{font:12px/1.5 inherit;color:' + t.muted + ';margin-bottom:18px;}',
+      '.ncdm-test-box__subtitle{font-family:inherit;font-size:12px;line-height:1.5;color:' + t.muted + ';margin-bottom:16px;}',
       '.ncdm-test-box__reset{border:1px solid ' + t.inputBorder + ';background:transparent;',
-        'color:' + t.accent + ';font:12px/1 inherit;padding:7px 11px;border-radius:6px;',
+        'color:' + t.accent + ';font-family:inherit;font-size:12px;line-height:1;padding:7px 11px;border-radius:6px;',
         'cursor:pointer;white-space:nowrap;transition:background-color .15s ease;}',
-      '.ncdm-test-box__reset:hover{background:rgba(255,255,255,.07);}',
+      '.ncdm-test-box__reset:hover{background:rgba(26,86,219,.07);}',
+
+      '.ncdm-test-box__fields{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}',
+      '.ncdm-test-box__field{flex:1 1 180px;min-width:0;}',
+      '.ncdm-test-box__label{display:block;font-family:inherit;font-size:12px;line-height:1.4;color:' + t.muted + ';margin-bottom:6px;}',
 
       '.ncdm-test-box .t-input-group{margin-bottom:14px;}',
-      '.ncdm-test-box .t-input-group:last-child{margin-bottom:0;}',
-
-      // подписи полей и пояснения под ними
       '.ncdm-test-box .t-input-title,.ncdm-test-box .t-input-title *{',
         'color:' + t.text + ' !important;opacity:1 !important;}',
-      '.ncdm-test-box .t-input-subtitle,.ncdm-test-box .t-input-subtitle *,',
-      '.ncdm-test-box .t-text,.ncdm-test-box .t-text *{',
+      '.ncdm-test-box .t-input-subtitle,.ncdm-test-box .t-input-subtitle *{',
         'color:' + t.muted + ' !important;opacity:1 !important;}',
 
-      // сами поля ввода
-      '.ncdm-test-box .t-input{background-color:' + t.inputBg + ' !important;',
-        'border:1px solid ' + t.inputBorder + ' !important;color:' + t.text + ' !important;',
-        'box-shadow:none !important;}',
-      '.ncdm-test-box .t-input:focus{border-color:' + t.accent + ' !important;}',
-      '.ncdm-test-box .t-input::placeholder{color:' + t.muted + ' !important;opacity:1;}',
-      '.ncdm-test-box .t-input::-webkit-input-placeholder{color:' + t.muted + ' !important;}',
+      // поля ввода: свои и перенесённые поля Тильды
+      '.ncdm-test-box .t-input,.ncdm-test-box__input{width:100%;box-sizing:border-box;height:44px;',
+        'padding:0 14px;border-radius:8px;font-family:inherit;font-size:14px;line-height:1;outline:none;',
+        'background-color:' + t.inputBg + ' !important;border:1px solid ' + t.inputBorder + ' !important;',
+        'color:' + t.text + ' !important;box-shadow:none !important;}',
+      '.ncdm-test-box .t-input:focus,.ncdm-test-box__input:focus{border-color:' + t.accent + ' !important;}',
+      '.ncdm-test-box .t-input::placeholder,.ncdm-test-box__input::placeholder{color:' + t.muted + ' !important;opacity:1;}',
 
       // сводка
-      '.ncdm-cutoff-panel{margin-top:10px;padding:12px 14px;border-radius:8px;',
+      '.ncdm-cutoff-panel{padding:12px 14px;border-radius:8px;',
         'background:' + t.panelBg + ';border:1px solid ' + t.border + ';',
-        'font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;',
-        'color:' + t.text + ';white-space:pre;overflow-x:auto;}',
+        'font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;',
+        // колонка формы в корзине узкая: строки переносятся, а не прокручиваются
+        'color:' + t.text + ';white-space:pre-wrap;word-break:break-word;}',
       '.ncdm-cutoff-panel.is-error{color:' + t.error + ';border-color:' + t.error + ';}'
     ].join('');
 
     document.head.appendChild(style);
   }
 
-  function groupOf(input) {
-    return input ? input.closest('.t-input-group') : null;
+  // ==================== ПОИСК КОРЗИН ====================
+
+  /** Все формы корзины на странице: с полем даты доставки и формы T706. */
+  function findForms() {
+    var forms = [];
+
+    function add(form) {
+      if (form && forms.indexOf(form) === -1) forms.push(form);
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll(CONFIG.anchorSelector), function (input) {
+      add(input.closest('form'));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(CONFIG.formSelector), add);
+
+    return forms;
   }
 
-  /** Тестовые поля + описание перед ними, в порядке DOM. */
-  function collectGroups() {
+  /** Тип корзины — для сводки. */
+  function cartTypeOf(form) {
+    if (form.closest('.t706__cartpage')) return 'полноэкранная (двухстадийная)';
+    if (form.closest('.t706__cartwin')) return 'всплывающее окно';
+    return 'форма на странице';
+  }
+
+  // ==================== ТЕСТОВЫЙ БЛОК ====================
+
+  function createField(kind) {
+    var field = document.createElement('div');
+    field.className = 'ncdm-test-box__field';
+
+    var label = document.createElement('label');
+    label.className = 'ncdm-test-box__label';
+    label.textContent = kind === 'time' ? CONFIG.box.timeLabel : CONFIG.box.dateLabel;
+
+    // без name: Тильда не отправит поле вместе с заказом
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'ncdm-test-box__input';
+    input.setAttribute('data-ncdm-cutoff', kind);
+    input.setAttribute('inputmode', 'numeric');
+
+    label.appendChild(input);
+    field.appendChild(label);
+    return field;
+  }
+
+  /** Тестовые поля Тильды + описание перед ними, в порядке DOM. */
+  function collectTildaGroups(form) {
     var groups = [];
 
-    [CONFIG.dateSelector, CONFIG.timeSelector].forEach(function (sel) {
-      var group = groupOf(document.querySelector(sel));
+    ['input[name="cutoff-date"]', 'input[name="cutoff-time"]'].forEach(function (sel) {
+      var input = form.querySelector(sel);
+      var group = input ? input.closest('.t-input-group') : null;
       if (group && groups.indexOf(group) === -1) groups.push(group);
     });
 
     if (!groups.length) return groups;
 
-    // ставим в порядке расположения на странице
     groups.sort(function (a, b) {
       return (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
     });
@@ -243,20 +332,28 @@
     return groups;
   }
 
-  function wrapTestFields() {
-    if (!CONFIG.box.enabled) return;
+  /** Куда вставить блок: перед полем даты доставки, иначе в начало полей формы. */
+  function insertBox(form, box) {
+    var anchor = form.querySelector(CONFIG.anchorSelector);
+    var anchorGroup = anchor ? (anchor.closest('.t-input-group') || anchor) : null;
 
-    var groups = collectGroups();
-    if (!groups.length) return;
+    if (anchorGroup && anchorGroup.parentNode) {
+      anchorGroup.parentNode.insertBefore(box, anchorGroup);
+      return;
+    }
 
-    // уже обёрнуто — выходим (важно: функция дёргается на каждую перерисовку корзины)
-    var parent = groups[0].parentNode;
-    if (parent && parent.classList && parent.classList.contains('ncdm-test-box')) return;
+    var inputsBox = form.querySelector('.t-form__inputsbox') || form;
+    inputsBox.insertBefore(box, inputsBox.firstChild);
+  }
+
+  function buildBox(form) {
+    if (form.querySelector('.ncdm-test-box')) return;
 
     injectStyles();
 
     var box = document.createElement('div');
-    box.className = 'ncdm-test-box';
+    // t-text — шрифт проекта Тильды: сама форма шрифт не задаёт
+    box.className = 'ncdm-test-box t-text';
 
     var head = document.createElement('div');
     head.className = 'ncdm-test-box__head';
@@ -286,170 +383,116 @@
     box.appendChild(head);
     box.appendChild(subtitle);
 
-    groups[0].parentNode.insertBefore(box, groups[0]);
-    groups.forEach(function (group) { box.appendChild(group); });
-  }
+    var tildaGroups = collectTildaGroups(form);
 
-  // ==================== ПАНЕЛЬ ====================
+    // блок встаёт до переноса полей, иначе якорем может оказаться перенесённое поле
+    insertBox(form, box);
 
-  var errors = { time: null, date: null };
-
-  function getPanel() {
-    var anchor = document.querySelector(CONFIG.timeSelector) ||
-                 document.querySelector(CONFIG.dateSelector);
-    if (!anchor) return null;
-
-    var panel = anchor.parentNode.querySelector('.ncdm-cutoff-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.className = 'ncdm-cutoff-panel';
-      anchor.parentNode.appendChild(panel);
+    if (tildaGroups.length) {
+      tildaGroups.forEach(function (group) { box.appendChild(group); });
+    } else {
+      var fields = document.createElement('div');
+      fields.className = 'ncdm-test-box__fields';
+      fields.appendChild(createField('date'));
+      fields.appendChild(createField('time'));
+      box.appendChild(fields);
     }
-    return panel;
+
+    if (CONFIG.showPanel) {
+      var panel = document.createElement('div');
+      panel.className = 'ncdm-cutoff-panel';
+      panel._ncdmForm = form;
+      box.appendChild(panel);
+    }
+
+    bindInputs(box);
   }
 
-  function padRight(str, len) {
-    while (str.length < len) str += ' ';
-    return str;
+  function bindInputs(scope) {
+    [['time', CONFIG.timeSelector], ['date', CONFIG.dateSelector]].forEach(function (pair) {
+      var kind = pair[0];
+
+      Array.prototype.forEach.call(scope.querySelectorAll(pair[1]), function (input) {
+        if (input._ncdmCutoffBound) return;
+        input._ncdmCutoffBound = true;
+        input.autocomplete = 'off';
+
+        // подставляем уже действующую подмену (например, после перезагрузки страницы)
+        if (state[kind] != null) {
+          input.value = kind === 'time' ? fmtTime(state.time) : fmtDate(state.date, input);
+        } else if (!String(input.value || '').trim()) {
+          input.value = '';
+        }
+
+        input.addEventListener('input', function () { readInput(kind, input, true); });
+        input.addEventListener('change', function () { readInput(kind, input, true); });
+      });
+    });
   }
 
-  function renderPanel() {
-    if (!CONFIG.showPanel) return;
+  /** Плейсхолдеры показывают реальное «сейчас» — пустое поле означает именно его. */
+  function renderPlaceholders() {
+    var now = CORE.getNow(defaultCity());
 
-    var panel = getPanel();
-    if (!panel) return;
+    Array.prototype.forEach.call(document.querySelectorAll(CONFIG.timeSelector), function (input) {
+      input.placeholder = 'Сейчас: ' + pad(now.hour) + ':' + pad(now.minute) + ', формат 14:00';
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(CONFIG.dateSelector), function (input) {
+      if (input.type !== 'date') input.placeholder = 'Сегодня: ' + fmtDate(now.date) + ', формат 31.07.2026';
+    });
+  }
 
+  // ==================== СВОДКА ====================
+
+  function renderPanels() {
     var problems = [];
     if (errors.time) problems.push('Не понял время: «' + errors.time + '». Формат 14:00');
     if (errors.date) problems.push('Не понял дату: «' + errors.date + '». Формат 31.07.2026');
 
     var faked = state.date != null || state.time != null;
-    var selected = CORE.getSelectedCity();
 
-    var lines = [
-      'Режим теста    : ' + (faked ? 'время подменено' : 'реальное время'),
-      ''
-    ];
+    Array.prototype.forEach.call(document.querySelectorAll('.ncdm-cutoff-panel'), function (panel) {
+      var form = panel._ncdmForm || panel.closest('form') || document;
+      var selected = CORE.getSelectedCity(form);
 
-    // По строке на город: местное время, отсечка, ближайшая доставка
-    Object.keys(CORE.CONFIG.cities).forEach(function (city) {
-      var cfg = CORE.getCityConfig(city);
-      var now = fakeNow(city);
-      var min = CORE.getMinDeliveryDate(city);
+      var lines = [
+        'Корзина : ' + (form === document ? '—' : cartTypeOf(form)),
+        'Время   : ' + (faked ? 'подменено' : 'реальное'),
+        'Отсечка : ' + pad(CORE.CONFIG.defaults.cutoffHour) + ':00 по местному времени',
+        '',
+        '  Город        UTC  Сейчас         Доставка'
+      ];
 
-      lines.push(
-        (city === selected ? '▸ ' : '  ') + padRight(city, 13) +
-        ' UTC+' + cfg.utcOffset +
-        '  ' + pad(now.hour) + ':' + pad(now.minute) +
-        ' ' + weekdayOf(now.date) + ' ' + CORE.toISO(now.date) +
-        '  ' + (CORE.isBeforeCutoff(city) ? 'до' : 'после') + ' ' + pad(cfg.cutoffHour) + ':00' +
-        '  → ' + weekdayOf(min) + ' ' + CORE.toISO(min)
-      );
+      // По строке на город: пояс, местное время (* — уже после отсечки), ближайшая доставка
+      Object.keys(CORE.CONFIG.cities).forEach(function (city) {
+        var cfg = CORE.getCityConfig(city);
+        var now = fakeNow(city);
+        var min = CORE.getMinDeliveryDate(city);
+
+        lines.push(
+          (city === selected ? '▸ ' : '  ') + padRight(city, 13) +
+          padRight('+' + cfg.utcOffset, 5) +
+          pad(now.hour) + ':' + pad(now.minute) + (CORE.isBeforeCutoff(city) ? ' ' : '*') +
+          ' ' + weekdayOf(now.date) + ' ' + fmtShort(now.date) +
+          '  ' + weekdayOf(min) + ' ' + fmtShort(min)
+        );
+      });
+
+      lines.push('', '* — заказ уже после отсечки');
+
+      if (problems.length) lines = problems.concat('', lines);
+
+      panel.classList.toggle('is-error', problems.length > 0);
+      panel.textContent = lines.join('\n');
     });
-
-    if (problems.length) lines = problems.concat('', lines);
-
-    panel.classList.toggle('is-error', problems.length > 0);
-    panel.textContent = lines.join('\n');
   }
 
-  // ==================== ОБНОВЛЕНИЕ ПО ПОЛЯМ ====================
+  // ==================== ЗАПУСК ====================
 
-  function refreshTime(persist) {
-    var input = document.querySelector(CONFIG.timeSelector);
-    if (!input) return;
-
-    var raw = String(input.value || '').trim();
-
-    if (!raw) { // пусто — работаем от реального времени
-      state.time = null;
-      errors.time = null;
-      if (persist) save(CONFIG.storeKeyTime, null);
-      applyState();
-      return;
-    }
-
-    var time = parseTime(raw);
-    errors.time = time ? null : raw;
-
-    if (time) {
-      state.time = time;
-      if (persist) save(CONFIG.storeKeyTime, fmtTime(time));
-    }
-
+  function ensureBoxes() {
+    findForms().forEach(buildBox);
+    bindInputs(document); // поля Тильды вне блока, если блок по какой-то причине не встал
     applyState();
-  }
-
-  function refreshDate(persist) {
-    var input = document.querySelector(CONFIG.dateSelector);
-    if (!input) return;
-
-    var raw = String(input.value || '').trim();
-
-    if (!raw) { // пусто — работаем от реальной даты
-      state.date = null;
-      errors.date = null;
-      if (persist) save(CONFIG.storeKeyDate, null);
-      applyState();
-      return;
-    }
-
-    var ts = parseDate(raw);
-    errors.date = ts == null ? raw : null;
-
-    if (ts != null) {
-      state.date = ts;
-      if (persist) save(CONFIG.storeKeyDate, CORE.toISO(ts));
-    }
-
-    applyState();
-  }
-
-  // ==================== ПРИВЯЗКА ====================
-
-  function bindTime() {
-    var input = document.querySelector(CONFIG.timeSelector);
-    if (!input || input._ncdmCutoffBound) return;
-
-    input._ncdmCutoffBound = true;
-    input.autocomplete = 'off';
-    if (input.type !== 'time') input.placeholder = 'Сейчас, напр. 14:00';
-
-    if (!parseTime(input.value)) {
-      var now = CORE.getNow(defaultCity());
-      input.value = load(CONFIG.storeKeyTime) || (pad(now.hour) + ':' + pad(now.minute));
-    }
-
-    input.addEventListener('input', function () { refreshTime(true); });
-    input.addEventListener('change', function () { refreshTime(true); });
-
-    refreshTime(false);
-  }
-
-  function bindDate() {
-    var input = document.querySelector(CONFIG.dateSelector);
-    if (!input || input._ncdmCutoffBound) return;
-
-    input._ncdmCutoffBound = true;
-    input.autocomplete = 'off';
-    if (input.type !== 'date') input.placeholder = 'Сегодня, напр. 31.07.2026';
-
-    if (parseDate(input.value) == null) {
-      var stored = load(CONFIG.storeKeyDate);
-      input.value = fmtDate(stored ? CORE.toTimestamp(stored) : CORE.getNow(defaultCity()).date, input);
-    }
-
-    input.addEventListener('input', function () { refreshDate(true); });
-    input.addEventListener('change', function () { refreshDate(true); });
-
-    refreshDate(false);
-  }
-
-  function bind() {
-    injectStyles();
-    wrapTestFields();
-    bindTime();
-    bindDate();
   }
 
   /** Сброс на боевые условия: реальные дата и время */
@@ -461,35 +504,33 @@
     save(CONFIG.storeKeyTime, null);
     save(CONFIG.storeKeyDate, null);
 
-    var realNow = CORE.getNow(defaultCity());
-    var timeInput = document.querySelector(CONFIG.timeSelector);
-    if (timeInput) timeInput.value = pad(realNow.hour) + ':' + pad(realNow.minute);
+    Array.prototype.forEach.call(
+      document.querySelectorAll(CONFIG.timeSelector + ',' + CONFIG.dateSelector),
+      function (input) { input.value = ''; }
+    );
 
-    var dateInput = document.querySelector(CONFIG.dateSelector);
-    if (dateInput) dateInput.value = fmtDate(realNow.date, dateInput);
-
-    if (timeInput) refreshTime(false); else applyState();
+    applyState();
   }
 
-  bind();
-  document.addEventListener('DOMContentLoaded', bind);
-  window.addEventListener('load', bind);
+  // подмена, сохранённая до перезагрузки страницы
+  state.time = parseTime(load(CONFIG.storeKeyTime));
+  state.date = parseDate(load(CONFIG.storeKeyDate));
 
-  // корзина Тильды перерисовывается — перепривязываемся; заодно пересчитываем
-  // дробный порог, он зависит от текущей минуты
-  setInterval(function () {
-    bind();
-    applyState();
-  }, 15000);
+  ensureBoxes();
+  document.addEventListener('DOMContentLoaded', ensureBoxes);
+  window.addEventListener('load', ensureBoxes);
 
-  // корзина Тильды перерисовывается динамически; свои же мутации пропускаем
+  // реальное время идёт: обновляем сводку и плейсхолдеры
+  setInterval(applyState, 15000);
+
+  // корзина Тильды перерисовывается динамически; свои мутации и календарь пропускаем
   var rebindTimer = null;
   new MutationObserver(function (records) {
     for (var i = 0; i < records.length; i++) {
       var t = records[i].target;
-      if (t.closest && t.closest('.ncdm-test-box')) continue;
+      if (t.closest && (t.closest('.ncdm-test-box') || t.closest('.litepicker'))) continue;
       clearTimeout(rebindTimer);
-      rebindTimer = setTimeout(bind, 150);
+      rebindTimer = setTimeout(function () { findForms().forEach(buildBox); }, 150);
       return;
     }
   }).observe(document.documentElement, { childList: true, subtree: true });
@@ -497,26 +538,30 @@
   console.log('[cutoff-tester] активен');
 
   window.NCDM_CUTOFF_TESTER = {
-    VERSION: 'fitbox-1.0.0',
+    VERSION: 'fitbox-1.1.0',
     CONFIG: CONFIG,
     reset: reset,
-    wrap: wrapTestFields,
+    wrap: ensureBoxes,
     parseTime: parseTime,
     parseDate: parseDate,
 
     /** Подменить время: NCDM_CUTOFF_TESTER.set('16:45'), null — реальное */
     set: function (value) {
-      var input = document.querySelector(CONFIG.timeSelector);
-      if (input) { input.value = value == null ? '' : value; refreshTime(true); return; }
       state.time = value == null ? null : parseTime(value);
+      Array.prototype.forEach.call(document.querySelectorAll(CONFIG.timeSelector), function (input) {
+        input.value = state.time ? fmtTime(state.time) : '';
+      });
+      save(CONFIG.storeKeyTime, state.time ? fmtTime(state.time) : null);
       applyState();
     },
 
     /** NCDM_CUTOFF_TESTER.setDate('31.07.2026'), без аргумента — вернуть реальную */
     setDate: function (value) {
-      var input = document.querySelector(CONFIG.dateSelector);
-      if (input) { input.value = value == null ? '' : value; refreshDate(true); return; }
       state.date = value == null ? null : parseDate(value);
+      Array.prototype.forEach.call(document.querySelectorAll(CONFIG.dateSelector), function (input) {
+        input.value = state.date == null ? '' : fmtDate(state.date, input);
+      });
+      save(CONFIG.storeKeyDate, state.date == null ? null : CORE.toISO(state.date));
       applyState();
     },
 
