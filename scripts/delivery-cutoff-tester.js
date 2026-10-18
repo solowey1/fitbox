@@ -154,6 +154,12 @@
 
   function weekdayOf(ts) { return WEEKDAYS[new Date(ts).getUTCDay()]; }
 
+  /** «30.09» */
+  function fmtShort(ts) {
+    var d = new Date(ts);
+    return pad(d.getUTCDate()) + '.' + pad(d.getUTCMonth() + 1);
+  }
+
   function padRight(str, len) {
     while (str.length < len) str += ' ';
     return str;
@@ -198,11 +204,12 @@
   // ==================== СТИЛИ ====================
 
   function injectStyles() {
-    if (document.getElementById('ncdm-test-box-styles')) return;
+    // свой id: стили других версий тестера на странице не должны подменять эти
+    if (document.getElementById('ncdm-test-box-styles-fitbox')) return;
 
     var t = CONFIG.box.theme;
     var style = document.createElement('style');
-    style.id = 'ncdm-test-box-styles';
+    style.id = 'ncdm-test-box-styles-fitbox';
 
     // !important нужен точечно: Тильда пишет цвет и рамку полей инлайном,
     // а инлайн-стиль обычным правилом не перебить. Всё ограничено .ncdm-test-box,
@@ -214,17 +221,17 @@
 
       '.ncdm-test-box__head{display:flex;align-items:center;justify-content:space-between;',
         'gap:12px;flex-wrap:wrap;margin-bottom:6px;}',
-      '.ncdm-test-box__title{font:600 12px/1.3 inherit;letter-spacing:.08em;',
+      '.ncdm-test-box__title{font-weight:600;font-family:inherit;font-size:12px;line-height:1.3;letter-spacing:.08em;',
         'text-transform:uppercase;color:' + t.accent + ';}',
-      '.ncdm-test-box__subtitle{font:12px/1.5 inherit;color:' + t.muted + ';margin-bottom:16px;}',
+      '.ncdm-test-box__subtitle{font-family:inherit;font-size:12px;line-height:1.5;color:' + t.muted + ';margin-bottom:16px;}',
       '.ncdm-test-box__reset{border:1px solid ' + t.inputBorder + ';background:transparent;',
-        'color:' + t.accent + ';font:12px/1 inherit;padding:7px 11px;border-radius:6px;',
+        'color:' + t.accent + ';font-family:inherit;font-size:12px;line-height:1;padding:7px 11px;border-radius:6px;',
         'cursor:pointer;white-space:nowrap;transition:background-color .15s ease;}',
       '.ncdm-test-box__reset:hover{background:rgba(26,86,219,.07);}',
 
       '.ncdm-test-box__fields{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}',
       '.ncdm-test-box__field{flex:1 1 180px;min-width:0;}',
-      '.ncdm-test-box__label{display:block;font:12px/1.4 inherit;color:' + t.muted + ';margin-bottom:6px;}',
+      '.ncdm-test-box__label{display:block;font-family:inherit;font-size:12px;line-height:1.4;color:' + t.muted + ';margin-bottom:6px;}',
 
       '.ncdm-test-box .t-input-group{margin-bottom:14px;}',
       '.ncdm-test-box .t-input-title,.ncdm-test-box .t-input-title *{',
@@ -234,7 +241,7 @@
 
       // поля ввода: свои и перенесённые поля Тильды
       '.ncdm-test-box .t-input,.ncdm-test-box__input{width:100%;box-sizing:border-box;height:44px;',
-        'padding:0 14px;border-radius:8px;font:14px/1 inherit;outline:none;',
+        'padding:0 14px;border-radius:8px;font-family:inherit;font-size:14px;line-height:1;outline:none;',
         'background-color:' + t.inputBg + ' !important;border:1px solid ' + t.inputBorder + ' !important;',
         'color:' + t.text + ' !important;box-shadow:none !important;}',
       '.ncdm-test-box .t-input:focus,.ncdm-test-box__input:focus{border-color:' + t.accent + ' !important;}',
@@ -243,8 +250,9 @@
       // сводка
       '.ncdm-cutoff-panel{padding:12px 14px;border-radius:8px;',
         'background:' + t.panelBg + ';border:1px solid ' + t.border + ';',
-        'font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;',
-        'color:' + t.text + ';white-space:pre;overflow-x:auto;}',
+        'font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;',
+        // колонка формы в корзине узкая: строки переносятся, а не прокручиваются
+        'color:' + t.text + ';white-space:pre-wrap;word-break:break-word;}',
       '.ncdm-cutoff-panel.is-error{color:' + t.error + ';border-color:' + t.error + ';}'
     ].join('');
 
@@ -447,12 +455,14 @@
       var selected = CORE.getSelectedCity(form);
 
       var lines = [
-        'Корзина        : ' + (form === document ? '—' : cartTypeOf(form)),
-        'Режим теста    : ' + (faked ? 'время подменено' : 'реальное время'),
-        ''
+        'Корзина : ' + (form === document ? '—' : cartTypeOf(form)),
+        'Время   : ' + (faked ? 'подменено' : 'реальное'),
+        'Отсечка : ' + pad(CORE.CONFIG.defaults.cutoffHour) + ':00 по местному времени',
+        '',
+        '  Город        UTC  Сейчас         Доставка'
       ];
 
-      // По строке на город: местное время, отсечка, ближайшая доставка
+      // По строке на город: пояс, местное время (* — уже после отсечки), ближайшая доставка
       Object.keys(CORE.CONFIG.cities).forEach(function (city) {
         var cfg = CORE.getCityConfig(city);
         var now = fakeNow(city);
@@ -460,13 +470,14 @@
 
         lines.push(
           (city === selected ? '▸ ' : '  ') + padRight(city, 13) +
-          ' UTC+' + cfg.utcOffset +
-          '  ' + pad(now.hour) + ':' + pad(now.minute) +
-          ' ' + weekdayOf(now.date) + ' ' + CORE.toISO(now.date) +
-          '  ' + (CORE.isBeforeCutoff(city) ? 'до' : 'после') + ' ' + pad(cfg.cutoffHour) + ':00' +
-          '  → ' + weekdayOf(min) + ' ' + CORE.toISO(min)
+          padRight('+' + cfg.utcOffset, 5) +
+          pad(now.hour) + ':' + pad(now.minute) + (CORE.isBeforeCutoff(city) ? ' ' : '*') +
+          ' ' + weekdayOf(now.date) + ' ' + fmtShort(now.date) +
+          '  ' + weekdayOf(min) + ' ' + fmtShort(min)
         );
       });
+
+      lines.push('', '* — заказ уже после отсечки');
 
       if (problems.length) lines = problems.concat('', lines);
 
