@@ -1,5 +1,44 @@
 const db = require('../config/database');
 
+/**
+ * Дата доставки из корзины Тильды: 'ДД.ММ.ГГГГ' (календарь) или 'ГГГГ-ММ-ДД'.
+ * Возвращает 'ГГГГ-ММ-ДД' или null, если дата не указана или некорректна.
+ */
+const parseDeliveryDate = (value) => {
+  const str = String(value || '').trim();
+  let match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(str);
+  let year, month, day;
+
+  if (match) {
+    [, day, month, year] = match.map(Number);
+  } else {
+    match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+    if (!match) return null;
+    [, year, month, day] = match.map(Number);
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+
+  return date.toISOString().slice(0, 10);
+};
+
+/**
+ * Разбор SKU товара из корзины Тильды:
+ * - '5'   → программа питания с id 5
+ * - 'D12' → блюдо конструктора с id 12
+ */
+const parseSku = (sku) => {
+  const str = String(sku || '').trim();
+
+  const dish = /^D(\d+)$/i.exec(str);
+  if (dish) return { dishId: parseInt(dish[1], 10), nutritionProgramId: null };
+
+  if (/^\d+$/.test(str)) return { dishId: null, nutritionProgramId: parseInt(str, 10) };
+
+  return { dishId: null, nutritionProgramId: null };
+};
+
 // Получить все заказы
 const getAllOrders = async (req, res) => {
   try {
@@ -26,9 +65,10 @@ const getOrderById = async (req, res) => {
 
     // Получить элементы заказа с информацией о программах питания
     const itemsResult = await db.query(
-      `SELECT oi.*, np.title as program_title, p.days
+      `SELECT oi.*, np.title as program_title, d.title as dish_title, p.days
        FROM order_items oi
        LEFT JOIN nutrition_programs np ON oi.nutrition_program_id = np.id
+       LEFT JOIN dishes d ON oi.dish_id = d.id
        LEFT JOIN prices p ON oi.price_id = p.id
        WHERE oi.order_id = $1`,
       [id]
@@ -77,8 +117,8 @@ const createOrder = async (req, res) => {
         name, email, phone, communicate, communicate_type,
         city, street, house, corpus, flat, entrance, floor,
         comment, promocode, source, payment_system,
-        tilda_order_id, total_amount, current_price, tilda_raw_data
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+        tilda_order_id, total_amount, current_price, tilda_raw_data, delivery_date
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
       RETURNING *`,
       [
         body.name || null,
@@ -101,6 +141,7 @@ const createOrder = async (req, res) => {
         payment.amount ? parseFloat(payment.amount) : null,
         payment.amount ? parseFloat(payment.amount) : null,
         JSON.stringify(body),
+        parseDeliveryDate(body.date),
       ]
     );
 
@@ -120,7 +161,11 @@ const createOrder = async (req, res) => {
 
     // Добавить элементы заказа
     for (const product of products) {
-      const nutritionProgramId = product.sku ? parseInt(product.sku, 10) : null;
+      const { dishId, nutritionProgramId } = parseSku(product.sku);
+
+      if (!dishId && !nutritionProgramId) {
+        console.warn('Order item with unknown SKU:', { orderId, sku: product.sku, name: product.name });
+      }
 
       // Найти price_id по nutrition_program_id, кол-ву дней и городу
       let priceId = null;
@@ -142,11 +187,12 @@ const createOrder = async (req, res) => {
       }
 
       await client.query(
-        `INSERT INTO order_items (order_id, nutrition_program_id, price_id, quantity, price)
-         VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO order_items (order_id, nutrition_program_id, dish_id, price_id, quantity, price)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           orderId,
           nutritionProgramId,
+          dishId,
           priceId,
           product.quantity || 1,
           product.amount ? parseFloat(product.amount) : null,
@@ -162,15 +208,18 @@ const createOrder = async (req, res) => {
               json_agg(json_build_object(
                 'id', oi.id,
                 'nutrition_program_id', oi.nutrition_program_id,
+                'dish_id', oi.dish_id,
                 'price_id', oi.price_id,
                 'quantity', oi.quantity,
                 'price', oi.price,
                 'program_title', np.title,
+                'dish_title', d.title,
                 'days', p.days
               )) as items
        FROM orders o
        LEFT JOIN order_items oi ON o.id = oi.order_id
        LEFT JOIN nutrition_programs np ON oi.nutrition_program_id = np.id
+       LEFT JOIN dishes d ON oi.dish_id = d.id
        LEFT JOIN prices p ON oi.price_id = p.id
        WHERE o.id = $1
        GROUP BY o.id`,
@@ -194,7 +243,7 @@ const updateOrder = async (req, res) => {
     const {
       name, email, phone, communicate, communicate_type,
       city, street, house, corpus, flat, entrance, floor,
-      comment, promocode, source, payment_system, current_price,
+      comment, promocode, source, payment_system, current_price, delivery_date,
     } = req.body;
 
     const result = await db.query(
@@ -202,12 +251,13 @@ const updateOrder = async (req, res) => {
        SET name = $1, email = $2, phone = $3, communicate = $4, communicate_type = $5,
            city = $6, street = $7, house = $8, corpus = $9, flat = $10,
            entrance = $11, floor = $12, comment = $13, promocode = $14,
-           source = $15, payment_system = $16, current_price = $17
-       WHERE id = $18 RETURNING *`,
+           source = $15, payment_system = $16, current_price = $17, delivery_date = $18
+       WHERE id = $19 RETURNING *`,
       [
         name, email, phone, communicate, communicate_type,
         city, street, house, corpus, flat, entrance, floor,
         comment, promocode, source, payment_system, current_price,
+        parseDeliveryDate(delivery_date),
         id,
       ]
     );
