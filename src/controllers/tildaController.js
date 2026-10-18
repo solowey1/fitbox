@@ -110,9 +110,11 @@ const getTildaMenu = async (req, res) => {
           (
             SELECT COUNT(*)
             FROM nutrition_program_dishes npd
+            JOIN dishes d ON d.id = npd.dish_id
             WHERE npd.nutrition_program_id = np.id
               AND npd.day_of_week = 1
               AND npd.week_number = 1
+              AND d.in_program
           ),
           0
         ) as dishes_per_day
@@ -300,6 +302,7 @@ const getProgramDishes = async (req, res) => {
       FROM nutrition_program_dishes npd
       JOIN dishes d ON npd.dish_id = d.id
       WHERE npd.nutrition_program_id = $1
+        AND d.in_program -- снятый флаг = черновик, в меню программы не показываем
     `;
 
     const params = [programId, portionCoefficient];
