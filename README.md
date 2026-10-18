@@ -160,6 +160,7 @@ chmod +x manage.sh
 - `GET /api/tilda/menu` - все данные меню (программы, города, цены)
 - `GET /api/tilda/menu/:programId/dishes` - блюда программы
 - `GET /api/tilda/dishes/:dishId` - детали блюда с ингредиентами
+- `GET /api/tilda/constructor` - приёмы пищи и блюда конструктора «Собери своё меню»
 
 ### Cache Management (требует API ключ)
 - `POST /api/cache/clear` - очистить кэш
