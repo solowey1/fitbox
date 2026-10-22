@@ -18,8 +18,7 @@
   --l: 20px;
   --xl: 24px;
   --primary: #ffc226;       /* фирменный жёлтый */
-  --primary-hover: #f5b000; /* обводка карточки при наведении — жёлтый поярче */
-  --on-primary: #201f1f;    /* текст на жёлтом; рамка фокуса — на светлом фоне жёлтая не видна */
+  --primary-hover: #f5b000; /* обводка карточки при наведении — жёлтый поярче; текст на жёлтом — --dark */
   --light: #ffffff;
   --dark: #121212;
   --dark-1: #2b2b2b;
@@ -152,7 +151,7 @@
 .fbc-btn:focus-visible,
 .fbc-card-open:focus-visible,
 .fbc-stepper-btn:focus-visible {
-  outline: 2px solid var(--on-primary);
+  outline: 2px solid var(--dark);
   outline-offset: 2px;
 }
 
@@ -196,7 +195,7 @@
 }
 
 .fbc-day:focus-visible {
-  outline: 2px solid var(--on-primary);
+  outline: 2px solid var(--dark);
   outline-offset: 2px;
 }
 
