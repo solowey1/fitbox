@@ -452,13 +452,12 @@
       const onlyConstructor = items.length > 0 && !cart.hasOtherProducts();
       const dates = items.map(item => item.iso).filter(Boolean).sort();
 
+      // скрываем классом с !important: на сайте у поля бывает своё display: block !important
       if (onlyConstructor && dates.length) {
         group.classList.add('fbc-hidden-field');
-        group.style.display = 'none';
         input.value = formatDayField(dates[0]);
       } else if (group.classList.contains('fbc-hidden-field')) {
         group.classList.remove('fbc-hidden-field');
-        group.style.display = '';
         input.value = '';
       }
 
@@ -509,6 +508,7 @@
       style.id = 'fbc-guard-styles';
       style.textContent = [
         '.fbc-cart-error{margin:8px 0;font-size:13px;line-height:1.4;color:#e5383b;}',
+        '.t706 form .t-input-group.fbc-hidden-field{display:none !important;}',
         '.fbc-order-locked{opacity:.45 !important;pointer-events:none !important;cursor:not-allowed !important;}'
       ].join('');
       document.head.appendChild(style);
