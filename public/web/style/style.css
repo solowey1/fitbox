@@ -20,7 +20,6 @@
     --primary: #ffc226;       /* фирменный жёлтый: заливки, рамки, акценты на тёмном */
     --primary-hover: #f5b000; /* ховер жёлтой заливки — темнее, текст остаётся тёмным */
     --primary-ink: #946600;   /* «жёлтый» текст на светлом фоне: #ffc226 там не читается */
-    --on-primary: #201f1f;    /* текст на жёлтом */
     --light: #ffffff;
     --light-rgb: 255, 255, 255;
     --dark: #121212;
@@ -113,7 +112,7 @@
 }
 
 .target-button:not(.active):hover {
-    --btn-text-color: var(--on-primary);
+    --btn-text-color: var(--dark);
     --btn-bg-color: var(--primary);
     --btn-border-color: var(--primary);
     box-shadow: none;
@@ -745,7 +744,7 @@
 }
 
 .menu-button.days:hover {
-    --btn-text-color: var(--on-primary);
+    --btn-text-color: var(--dark);
     --btn-bg-color: var(--primary);
 }
 
@@ -880,7 +879,7 @@
 }
 
 .summary-button {
-    --btn-text-color: var(--on-primary);
+    --btn-text-color: var(--dark);
     --btn-bg-color: var(--primary);
     --btn-border-color: var(--primary);
     display: flex;
@@ -903,7 +902,7 @@
 
 /* жёлтая кнопка на светлом фоне: при наведении заливка темнеет */
 .summary-button:hover {
-    --btn-text-color: var(--on-primary);
+    --btn-text-color: var(--dark);
     --btn-bg-color: var(--primary-hover);
     --btn-border-color: var(--primary-hover);
 }
