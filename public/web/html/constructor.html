@@ -1,0 +1,45 @@
+<!--
+  Конструктор «Собери своё меню» — блок T123 на странице kzn.fitbox.su.
+  Стили: public/web/style/constructor.css (вставить в <style> в этом же блоке или в соседнем T123).
+  Скрипт: https://app.fitbox.su/scripts/constructor.js
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+
+<!-- data-city: город, для которого работает страница (конструктор запущен только в Казани) -->
+<div id="constructor" class="fbc" data-city="Казань">
+  <div class="fbc-wrapper">
+    <div class="fbc-head">
+      <h2 class="fbc-title">Собери своё меню</h2>
+      <p class="fbc-subtitle">Составляйте рацион с&nbsp;учётом калорий и&nbsp;БЖУ каждого блюда</p>
+    </div>
+
+    <div class="fbc-filters">
+      <div class="fbc-choose">
+        <span>Выберите приемы</span>
+        <div class="fbc-choose-line"></div>
+      </div>
+      <div class="fbc-chips" role="group" aria-label="Выберите приемы"></div>
+    </div>
+
+    <div class="fbc-status" aria-live="polite"><span class="fbc-loader"></span></div>
+
+    <div class="fbc-sections"></div>
+  </div>
+
+  <div class="fbc-bar" hidden>
+    <div class="fbc-bar-inner">
+      <div class="fbc-bar-info">
+        <div class="fbc-bar-summary">
+          <span class="fbc-bar-count"></span>
+          <span class="fbc-bar-total"></span>
+        </div>
+        <div class="fbc-bar-nutrition"></div>
+      </div>
+      <button type="button" class="fbc-btn fbc-bar-button">Оформить</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://app.fitbox.su/scripts/constructor.js"></script>
