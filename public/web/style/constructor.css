@@ -198,6 +198,14 @@
   outline-offset: 2px;
 }
 
+/* день без меню: доставка есть, но блюд на этот день нет */
+.fbc-day.is-empty,
+.fbc-day:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  border-color: var(--surface);
+}
+
 .fbc-day-weekday {
   font-size: 12px;
   line-height: 15px;
