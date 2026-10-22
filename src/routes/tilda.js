@@ -26,8 +26,8 @@ router.get('/menu/:programId/dishes', cacheMiddleware(900), getProgramDishes);
 // Кэш: 30 минут (детали блюда меняются очень редко)
 router.get('/dishes/:dishId', cacheMiddleware(1800), getDishDetails);
 
-// Блюда и приёмы пищи для конструктора «Собери своё меню»
-// Кэш: 10 минут
-router.get('/constructor', cacheMiddleware(600), getConstructorMenu);
+// Блюда и приёмы пищи для конструктора «Собери своё меню», меню по датам (?dates=&city=)
+// Кэш: 5 минут — изменения меню в Budibase появляются на сайте не позже чем через 5 минут
+router.get('/constructor', cacheMiddleware(300), getConstructorMenu);
 
 module.exports = router;
