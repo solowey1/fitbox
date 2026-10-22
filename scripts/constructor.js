@@ -46,6 +46,8 @@
     containerSelector: '#constructor',
     cartFormSelector: '.t706 form',
     cartListSelector: '.t706__cartwin-products, .t706__sidebar-products, .t706__cartpage-products',
+    // «Оформить заказ» на первом шаге полноэкранной корзины (дальше — форма с отправкой)
+    cartContinueSelector: '.t706__sidebar-continue, .t706__cartpage-open-form',
     citySelector: 'select[name="city"]',
     dateFieldSelector: 'input[name="date"]',
     submitSelector: 'button[type="submit"], input[type="submit"], .t-submit',
@@ -79,6 +81,11 @@
       // блюда в корзине на дни, на которые доставка уже недоступна, или которых больше нет в меню на свой день
       unavailableDays: 'Больше нельзя выбрать блюда на следующие дни: {dates}.',
       unavailableRemove: 'Уберите следующие блюда из корзины:',
+      // в корзине Тильды
+      cartWarning: 'Часть блюд больше нельзя заказать на выбранные дни. Удалите их, чтобы оформить заказ.',
+      cartRowUnavailable: 'Недоступно на этот день',
+      cartRemoveDay: 'Удалить блюда за этот день',
+      cartRemoveUnavailable: 'Удалить недоступные блюда',
       add: 'Добавить',
       dayEmpty: 'пока пусто',
       noNutrition: 'КБЖУ уточняется'
@@ -383,6 +390,17 @@
       this.commit();
     },
 
+    /** Убрать товары по артикулам (кнопка «Удалить блюда за этот день» в корзине) */
+    remove(skus) {
+      if (!this.isReady()) return;
+      if (typeof window.tcart__syncProductsObject__LStoObj === 'function') {
+        window.tcart__syncProductsObject__LStoObj();
+      }
+      const remove = new Set(skus);
+      window.tcart.products = this.products().filter(product => !product || !remove.has(String(product.sku)));
+      this.commit();
+    },
+
     open() {
       if (typeof window.tcart__openCart === 'function') window.tcart__openCart();
     },
@@ -416,9 +434,18 @@
       const style = document.createElement('style');
       style.id = 'fbc-cart-styles';
       style.textContent = [
-        '.fbc-cart-date{margin:24px 0 4px;padding-bottom:8px;font-size:16px;font-weight:600;',
+        '.fbc-cart-date{display:flex;align-items:center;justify-content:space-between;gap:12px;',
+        'margin:24px 0 4px;padding-bottom:8px;font-size:16px;font-weight:600;',
         'line-height:1.3;border-bottom:1px solid rgba(0,0,0,.1);}',
-        '.fbc-cart-date:first-child{margin-top:0;}',
+        '.fbc-cart-date:first-child,.fbc-cart-warning+.fbc-cart-date{margin-top:0;}',
+        '.fbc-cart-date-remove{flex:none;padding:6px 12px;font:inherit;font-size:13px;font-weight:500;',
+        'line-height:1.2;color:#e5383b;background:transparent;border:1px solid #e5383b;border-radius:20px;',
+        'cursor:pointer;transition:background-color .2s ease,color .2s ease;}',
+        '.fbc-cart-date-remove:hover{color:#fff;background:#e5383b;}',
+        '.fbc-cart-warning{margin:0 0 16px;padding:10px 14px;font-size:13px;line-height:1.4;',
+        'color:#b3261e;background:#fdecea;border-radius:10px;}',
+        '.fbc-cart-row-note{margin-top:4px;font-size:12px;font-weight:500;color:#e5383b;}',
+        '.t706__product.fbc-cart-row-unavailable .t706__product-thumb{opacity:.5;}',
         '.t706__product-title__option .fbc-hidden,.t706__product-title__option.fbc-hidden{display:none !important;}'
       ].join('');
       document.head.appendChild(style);
@@ -428,8 +455,12 @@
       const products = cart.products();
       const dateLabel = `${CONFIG.optionLabels.date}:`;
 
+      // что уже нельзя заказать: пометки у блюд, кнопки у дат, предупреждение сверху
+      const { unavailable } = findUnavailable(cart.constructorItems(), getCartCity(), () => refreshCart());
+      const unavailableSkus = new Set(unavailable.map(item => String(item.product.sku)));
+
       document.querySelectorAll(CONFIG.cartListSelector).forEach((list) => {
-        list.querySelectorAll('.fbc-cart-date').forEach(header => header.remove());
+        list.querySelectorAll('.fbc-cart-date, .fbc-cart-warning, .fbc-cart-row-note').forEach(node => node.remove());
 
         const rows = Array.prototype.filter.call(list.children, row => row.classList.contains('t706__product'));
         const others = [];
@@ -450,6 +481,11 @@
             });
           });
 
+          const isUnavailable = unavailableSkus.has(String(product.sku));
+          row.classList.toggle('fbc-cart-row-unavailable', isUnavailable);
+          const title = row.querySelector('.t706__product-title');
+          if (isUnavailable && title) title.appendChild(el('div', 'fbc-cart-row-note', CONFIG.texts.cartRowUnavailable));
+
           if (!groups.has(parsed.iso)) groups.set(parsed.iso, []);
           groups.get(parsed.iso).push(row);
         });
@@ -457,10 +493,33 @@
         if (!groups.size) return;
 
         this.injectStyles();
+
+        if (unavailable.length) {
+          list.insertBefore(el('div', 'fbc-cart-warning t-text', CONFIG.texts.cartWarning), list.firstChild);
+        }
+
         // остальные товары (программы) — первыми, затем дни по порядку
         others.forEach(row => list.appendChild(row));
         Array.from(groups.keys()).sort().forEach((iso) => {
-          list.appendChild(el('div', 'fbc-cart-date t-name', formatDayLong(iso)));
+          const header = el('div', 'fbc-cart-date t-name');
+          header.append(el('span', null, formatDayLong(iso)));
+
+          const dayItems = cart.constructorItems().filter(item => item.iso === iso);
+          const dayUnavailable = dayItems.filter(item => unavailableSkus.has(String(item.product.sku)));
+          if (dayUnavailable.length) {
+            // весь день недоступен — «удалить блюда за этот день», иначе — только недоступные блюда
+            const label = dayUnavailable.length === dayItems.length ? CONFIG.texts.cartRemoveDay : CONFIG.texts.cartRemoveUnavailable;
+            const remove = el('button', 'fbc-cart-date-remove', label);
+            remove.type = 'button';
+            remove.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              cart.remove(dayUnavailable.map(item => String(item.product.sku)));
+            });
+            header.append(remove);
+          }
+
+          list.appendChild(header);
           groups.get(iso).forEach(row => list.appendChild(row));
         });
       });
@@ -498,6 +557,38 @@
       const ids = menuByDate.get(city, item.iso);
       return ids && !ids.has(item.dishId);
     });
+  };
+
+  /** Город заказа: поле «Город» в корзине, иначе город страницы */
+  const getCartCity = () => {
+    const select = document.querySelector(`${CONFIG.cartFormSelector} ${CONFIG.citySelector}`);
+    return (select && select.value) || state.city || getSiteCity();
+  };
+
+  /**
+   * Блюда корзины, которые уже нельзя заказать в городе:
+   * stale — дни, на которые доставка недоступна (прошла отсечка);
+   * notInMenu — блюда, которых нет в меню на свой день;
+   * unavailable — все такие блюда вместе. onLoaded — когда догрузится меню на даты.
+   * В городе без конструктора не считаем: там заказ блокируется целиком.
+   */
+  const findUnavailable = (items, city, onLoaded) => {
+    const core = window.NCDM_DELIVERY;
+    if (!isCityAllowed(city)) return { stale: [], notInMenu: [], unavailable: [] };
+
+    const stale = !core ? [] : Array.from(new Set(
+      items.filter(item => item.iso && !core.isDateAllowed(city, item.iso)).map(item => item.iso)
+    )).sort();
+    const notInMenu = notInMenuItems(items, city, stale, onLoaded);
+    const unavailable = items.filter(item => item.iso && stale.indexOf(item.iso) !== -1).concat(notInMenu);
+
+    return { stale, notInMenu, unavailable };
+  };
+
+  /** Корзина целиком: группы по датам и проверки (после загрузки меню, смены города и т. п.) */
+  const refreshCart = () => {
+    cartView.decorate();
+    cartGuard.check();
   };
 
   /**
@@ -586,7 +677,6 @@
 
     check() {
       const items = cart.constructorItems();
-      const core = window.NCDM_DELIVERY;
 
       document.querySelectorAll(CONFIG.cartFormSelector).forEach((form) => {
         const select = form.querySelector(CONFIG.citySelector);
@@ -595,18 +685,13 @@
 
         const wrongCity = items.length > 0 && !isCityAllowed(city);
 
-        // даты, на которые доставка уже недоступна
-        const stale = wrongCity || !core ? [] : Array.from(new Set(
-          items.filter(item => item.iso && !core.isDateAllowed(city, item.iso)).map(item => item.iso)
-        )).sort();
+        // даты, на которые доставка уже недоступна, и блюда, которых нет в меню на свой день
+        const { stale, notInMenu } = findUnavailable(items, city, () => refreshCart());
 
         if (select) {
           const anchor = select.closest('.t-input-group') || select;
           this.setMessage(form, 'city', anchor.lastElementChild || anchor, wrongCity ? CONFIG.texts.cityLocked : '');
         }
-
-        // блюда, которых больше нет в меню на свой день (убрали из цикла или в стоп-лист)
-        const notInMenu = wrongCity ? [] : notInMenuItems(items, city, stale, () => this.check());
 
         if (submit) {
           const anchor = submit.closest('.t-form__submit') || submit;
@@ -622,6 +707,30 @@
         form.classList.toggle('fbc-order-form-locked', locked);
 
         this.syncDateField(form, items);
+      });
+
+      this.lockContinue(findUnavailable(items, getCartCity(), () => refreshCart()).unavailable.length > 0);
+    },
+
+    /**
+     * «Оформить заказ» на первом шаге корзины: пока есть недоступные блюда, не пускаем к форме.
+     * disabled ставим и снимаем только свой (data-fbc-disabled), чтобы не сбить блокировку
+     * самой Тильды (например, по минимальной сумме заказа).
+     */
+    lockContinue(locked) {
+      document.querySelectorAll(CONFIG.cartContinueSelector).forEach((button) => {
+        button.classList.toggle('fbc-order-locked', locked);
+        if (locked) {
+          if (!button.disabled) {
+            button.disabled = true;
+            button.setAttribute('data-fbc-disabled', '1');
+          }
+          button.setAttribute('aria-disabled', 'true');
+        } else if (button.hasAttribute('data-fbc-disabled')) {
+          button.disabled = false;
+          button.removeAttribute('data-fbc-disabled');
+          button.removeAttribute('aria-disabled');
+        }
       });
     },
 
@@ -650,6 +759,13 @@
       }, true);
 
       document.addEventListener('click', (event) => {
+        const next = event.target.closest && event.target.closest(CONFIG.cartContinueSelector);
+        if (next && next.classList.contains('fbc-order-locked')) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+
         const button = event.target.closest && event.target.closest(CONFIG.submitSelector);
         if (!button) return;
 
@@ -666,6 +782,9 @@
         event.preventDefault();
         event.stopPropagation();
       }, true);
+
+      // Тильда сама включает «Оформить заказ» (минимальная сумма и т. п.) — возвращаем нашу блокировку
+      afterTildaCall('tcart__unblockSidebarContinueButton', () => this.check());
 
       // наступление отсечки на открытой странице
       setInterval(() => this.check(), 60000);
@@ -791,6 +910,9 @@
     controls.append(minus, count, plus);
     wrapper.append(addButton, controls);
 
+    // клик по счётчику (в том числе между кнопками) не должен открывать карточку блюда
+    wrapper.addEventListener('click', event => event.stopPropagation());
+
     if (!state.steppers.has(dish.id)) state.steppers.set(dish.id, []);
     state.steppers.get(dish.id).push(wrapper);
 
@@ -819,7 +941,9 @@
     open.setAttribute('aria-label', `Подробнее: ${dish.title}`);
     // внутри button допустимы только строчные элементы — заголовок оформлен span
     open.append(lazyImage('fbc-card-image', dish.image), el('span', 'fbc-card-title', dish.title));
-    open.addEventListener('click', () => openDialog(dish));
+    // окно блюда — по клику на любое место карточки (кнопка выше остаётся для клавиатуры:
+    // её клик всплывает сюда же); счётчик и «Добавить» клик дальше не пускают
+    card.addEventListener('click', () => openDialog(dish));
 
     const meta = el('div', 'fbc-card-meta', `${dish.weight} г`);
     const nutrition = el('div', 'fbc-card-nutrition', nutritionLine(dish.nutrition));
@@ -1295,7 +1419,7 @@
     initConstructor();
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.2.2',
+      VERSION: 'fitbox-1.3.0',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({

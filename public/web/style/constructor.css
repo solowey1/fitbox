@@ -28,6 +28,7 @@
   --grey-3: #717171;
   --surface: #f2f2f2; /* карточки, фильтры, итоговая плашка — как в меню программ */
   --green: #3eb352;   /* выбранный фильтр, «Добавить», «Оформить» */
+  --control-h: 40px;  /* высота «Добавить» и счётчика +/− — одинаковая, чтобы карточка не прыгала */
 }
 
 .fbc {
@@ -321,6 +322,7 @@
 .fbc-card {
   display: flex;
   flex-direction: column;
+  cursor: pointer; /* по клику на любое место карточки открывается окно блюда */
   padding: var(--m);
   color: var(--dark);
   background-color: var(--surface);
@@ -468,10 +470,18 @@
   background: var(--dark);
 }
 
+/* «Добавить» и счётчик — одной высоты */
+.fbc-btn.fbc-btn-add {
+  height: var(--control-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .fbc-stepper-controls {
   display: none;
   align-items: center;
   gap: var(--xs);
+  height: var(--control-h);
   padding: 4px;
   background: var(--light);
   border-radius: 40px;
@@ -486,8 +496,8 @@
 }
 
 .fbc-stepper-btn {
-  width: 34px;
-  height: 34px;
+  width: calc(var(--control-h) - 8px);
+  height: calc(var(--control-h) - 8px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -523,10 +533,9 @@
   z-index: 50;
   padding: var(--s) 0;
   color: var(--dark);
-  background: rgba(242, 242, 242, .95);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 -4px 20px rgba(18, 18, 18, .08);
+  /* фон непрозрачный, тень короткая и плотная: плашка отделена от карточек, без размытого перехода */
+  background: var(--surface);
+  box-shadow: 0 -1px 0 rgba(18, 18, 18, .08), 0 -4px 10px -4px rgba(18, 18, 18, .18);
 }
 
 .fbc-bar-inner {
@@ -883,7 +892,7 @@
 
   .fbc-card .fbc-btn-add {
     width: 100%;
-    padding: 10px 12px;
+    padding: 0 12px;
   }
 
   .fbc-card .fbc-stepper-controls {
@@ -891,9 +900,9 @@
     justify-content: space-between;
   }
 
-  .fbc-stepper-btn {
-    width: 30px;
-    height: 30px;
+  .fbc,
+  .fbc-dialog {
+    --control-h: 38px;
   }
 
   .fbc-bar {
