@@ -85,6 +85,12 @@
 
   // ==================== КОРЗИНА ТИЛЬДЫ ====================
 
+  /**
+   * Удалённый в корзине товар Тильда 4 секунды держит с deleted: 'yes' (можно вернуть),
+   * в подсчётах он уже не участвует — как и у самой Тильды
+   */
+  const isInCart = product => product && product.deleted !== 'yes' && (parseInt(product.quantity, 10) || 0) > 0;
+
   const cart = {
     isReady() {
       return !!window.tcart && typeof window.tcart__addProduct === 'function';
@@ -96,12 +102,12 @@
 
     quantity(sku) {
       return this.products().reduce((sum, product) => (
-        product && String(product.sku) === sku ? sum + (parseInt(product.quantity, 10) || 0) : sum
+        isInCart(product) && String(product.sku) === sku ? sum + parseInt(product.quantity, 10) : sum
       ), 0);
     },
 
     constructorProducts() {
-      return this.products().filter(product => product && isConstructorSku(product.sku));
+      return this.products().filter(product => isInCart(product) && isConstructorSku(product.sku));
     },
 
     /** Перерисовать корзину и сохранить — то же, что делает Тильда после своих изменений */
@@ -153,6 +159,8 @@
         products.splice(index, 1);
       } else {
         const product = products[index];
+        // блюдо удалили в корзине, но таймер «вернуть» ещё идёт — отменяем удаление
+        if (product.deleted === 'yes') delete product.deleted;
         product.quantity = quantity;
         product.amount = typeof window.tcart__roundPrice === 'function'
           ? window.tcart__roundPrice(product.price * quantity)
@@ -719,8 +727,8 @@
     CONFIG,
     reload: () => state.root && start(),
     debug: () => ({
-      siteCity: getSiteCity(),
-      allowed: isCityAllowed(getSiteCity()),
+      pageCity: (state.root && state.root.getAttribute('data-city')) || getSiteCity(),
+      allowed: isCityAllowed((state.root && state.root.getAttribute('data-city')) || getSiteCity()),
       cartReady: cart.isReady(),
       dishes: state.dishes.length,
       inCart: cart.constructorProducts().map(p => `${p.sku} × ${p.quantity}`)
