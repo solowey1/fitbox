@@ -138,6 +138,11 @@
       } finally {
         if (openOnOrder) cartBlock.setAttribute('data-opencart-onorder', openOnOrder);
       }
+
+      // если корзина открыта, новое блюдо должно сразу появиться в её списке
+      ['tcart__reDrawProducts', 'tcart__reDrawTotal'].forEach((name) => {
+        if (typeof window[name] === 'function') window[name]();
+      });
     },
 
     setQuantity(dish, quantity) {
