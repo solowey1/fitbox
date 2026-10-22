@@ -28,6 +28,7 @@
     submit: 'button[type="submit"], input[type="submit"], .t-submit',
 
     inline: false,           // true — календарь всегда раскрыт под полем
+    gap: 6,                  // отступ всплывающего календаря от поля, px
     notifyTilda: false,      // слать ли форме событие change после выбора даты
     maxDaysAhead: 60,
     autoSelectFirst: false,
@@ -217,11 +218,17 @@
     input.autocomplete = 'off';
     input.classList.add('ncdm-dp-input');
 
+    // Календарь живёт внутри блока поля, а не в body: в корзине Тильды прокручивается
+    // не страница, а сама корзина, и календарь из body оставался висеть на месте
+    var anchor = input.parentNode;
+    if (window.getComputedStyle(anchor).position === 'static') anchor.style.position = 'relative';
+
     // Открытием и закрытием управляет ТОЛЬКО библиотека.
     // Свои обработчики click/focus здесь вешать нельзя: клик даёт focus,
     // и два обработчика начинают гасить друг друга — календарь моргает.
     var picker = new window.Litepicker({
       element: input,
+      parentEl: CONFIG.inline ? null : anchor,
       singleMode: true,
       inlineMode: CONFIG.inline,
       format: 'DD.MM.YYYY',
@@ -243,8 +250,16 @@
         // поймает свой же 'change' и уронит стек рекурсией
         p.on('selected', function () { commit(input); });
 
-        // календарь вставляется в body, где у Тильды шрифт не задан — t-text даёт шрифт проекта
+        // у контейнеров Тильды шрифт не задан — t-text даёт шрифт проекта
         p.on('render', function (ui) { ui.classList.add('t-text'); });
+
+        // Litepicker считает координаты от страницы даже с parentEl —
+        // ставим календарь под полем относительно его блока
+        p.on('show', function () {
+          if (CONFIG.inline) return;
+          p.ui.style.top = (input.offsetTop + input.offsetHeight + CONFIG.gap) + 'px';
+          p.ui.style.left = input.offsetLeft + 'px';
+        });
       }
     });
 
@@ -348,7 +363,7 @@
   scan();
 
   window.NCDM_DELIVERY_PICKER = {
-    VERSION: 'fitbox-1.0.1', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
+    VERSION: 'fitbox-1.0.2', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
     CONFIG: CONFIG,
     scan: scan,
     updateSubmit: updateSubmit,
