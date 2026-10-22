@@ -452,12 +452,26 @@
       const onlyConstructor = items.length > 0 && !cart.hasOtherProducts();
       const dates = items.map(item => item.iso).filter(Boolean).sort();
 
+      // Календарь доставки (Litepicker) при пересчёте переписывает поле своей выбранной датой,
+      // поэтому дату ставим через него, а без календаря — прямо в поле
+      const picker = input._ncdmPicker;
+
       // скрываем классом с !important: на сайте у поля бывает своё display: block !important
       if (onlyConstructor && dates.length) {
         group.classList.add('fbc-hidden-field');
-        input.value = formatDayField(dates[0]);
+
+        const [year, month, day] = dates[0].split('-').map(Number);
+        if (picker) {
+          const current = picker.getDate();
+          const date = current && (current.toJSDate ? current.toJSDate() : current);
+          const same = date && date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+          if (!same) picker.setDate(new Date(year, month - 1, day));
+        } else {
+          input.value = formatDayField(dates[0]);
+        }
       } else if (group.classList.contains('fbc-hidden-field')) {
         group.classList.remove('fbc-hidden-field');
+        if (picker) picker.clearSelection();
         input.value = '';
       }
 
@@ -523,7 +537,12 @@
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest && event.target.closest(CONFIG.submitSelector);
-        if (!button || !button.classList.contains('fbc-order-locked')) return;
+        if (!button) return;
+
+        // перед проверкой формы Тильдой: заполнить скрытое поле даты, учесть отсечку
+        this.check();
+
+        if (!button.classList.contains('fbc-order-locked')) return;
         event.preventDefault();
         event.stopPropagation();
       }, true);
