@@ -844,9 +844,22 @@
     const dialog = el('dialog', 'fbc-dialog');
     dialog.setAttribute('aria-label', dish.title);
 
-    const close = el('button', 'fbc-dialog-close', '×');
+    // крестик — SVG, а не символ «×»: у глифа своя посадка в шрифте, он стоит не по центру
+    // и при повороте на ховере заметно уезжает
+    const close = el('button', 'fbc-dialog-close');
     close.type = 'button';
     close.setAttribute('aria-label', 'Закрыть');
+    const svgNs = 'http://www.w3.org/2000/svg';
+    const cross = document.createElementNS(svgNs, 'svg');
+    // размеры и линии — атрибутами: крестик верный и со старыми стилями на странице
+    [['viewBox', '0 0 24 24'], ['width', '18'], ['height', '18'], ['aria-hidden', 'true'],
+      ['fill', 'none'], ['stroke', 'currentColor'], ['stroke-width', '2.2'], ['stroke-linecap', 'round']]
+      .forEach(([name, value]) => cross.setAttribute(name, value));
+    cross.style.display = 'block';
+    const crossPath = document.createElementNS(svgNs, 'path');
+    crossPath.setAttribute('d', 'M6 6l12 12M18 6L6 18');
+    cross.appendChild(crossPath);
+    close.appendChild(cross);
     close.addEventListener('click', closeDialog);
 
     const body = el('div', 'fbc-dialog-body');
@@ -1253,7 +1266,7 @@
     initConstructor();
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.2.0',
+      VERSION: 'fitbox-1.2.1',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
