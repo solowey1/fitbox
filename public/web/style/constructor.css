@@ -531,10 +531,16 @@
 
 .fbc-bar-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--s);
+  gap: 2px var(--s);
   font-size: 18px;
   font-weight: 600;
+}
+
+/* сумма не рвётся: если не помещается рядом с днём — уходит строкой ниже целиком */
+.fbc-bar-total {
+  white-space: nowrap;
 }
 
 .fbc-bar-count {
