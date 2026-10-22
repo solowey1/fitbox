@@ -437,6 +437,47 @@
     -webkit-overflow-scrolling: touch;
 }
 
+@media screen and (min-width: 961px) {
+    /*
+     * Скроллбар списка блюд — посередине между карточками и серой панелью.
+     * Правый отступ .menu-wrapper — 55px, var(--s) из них уже занимает .content-wrapper.
+     * Контейнер расширяем вправо на --scrollbar-shift и на столько же увеличиваем
+     * внутренний отступ: карточки остаются на месте, уезжает только скроллбар.
+     */
+    .content-wrapper {
+        --menu-padding-right: 55px;
+        --scrollbar-width: 4px;
+        --scrollbar-shift: calc((var(--menu-padding-right) - var(--s) + var(--scrollbar-width)) / 2);
+        margin-right: calc((var(--s) + var(--scrollbar-shift)) * -1);
+        padding-right: calc(var(--s) + var(--scrollbar-shift));
+        /* scrollbar-color наследуется от #menu, а с ним Chrome игнорирует ::-webkit-scrollbar */
+        scrollbar-color: auto;
+    }
+
+    /* Ширина скроллбара фиксирована, иначе центр зависел бы от системного.
+       Chrome 121+ игнорирует ::-webkit-scrollbar при заданных scrollbar-width/-color,
+       поэтому стандартные свойства — только для браузеров без ::-webkit-scrollbar (Firefox) */
+    @supports not selector(::-webkit-scrollbar) {
+        .content-wrapper {
+            scrollbar-width: thin;
+            scrollbar-color: #d0d0d0 transparent;
+        }
+    }
+
+    .content-wrapper::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .content-wrapper::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .content-wrapper::-webkit-scrollbar-thumb {
+        background-color: #d0d0d0;
+        border-radius: 20px;
+    }
+}
+
 .program-wrapper {
     padding-bottom: 20px;
 }
