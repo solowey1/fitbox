@@ -53,10 +53,9 @@
   display: none !important;
 }
 
+/* Ширину и боковые поля задаёт сетка Тильды: t-container + t-col t-col_12 в разметке */
 .fbc-wrapper {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: calc(var(--l) * 3) 55px calc(var(--l) * 2) 45px;
+  padding: calc(var(--l) * 3) 0 calc(var(--l) * 2);
 }
 
 /* ─── Заголовок ─────────────────────────────────────────────────────────── */
@@ -310,10 +309,11 @@
   color: var(--grey-3);
 }
 
+/* Карточки по колонкам Тильды: 4 карточки по 3 колонки, промежуток = промежуток сетки (40 px) */
 .fbc-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--xl);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 40px;
 }
 
 /* ─── Карточка блюда ────────────────────────────────────────────────────── */
@@ -521,7 +521,7 @@
   position: sticky;
   bottom: 0;
   z-index: 50;
-  padding: var(--s) 55px var(--s) 45px;
+  padding: var(--s) 0;
   color: var(--dark);
   background: rgba(242, 242, 242, .95);
   -webkit-backdrop-filter: blur(8px);
@@ -530,8 +530,6 @@
 }
 
 .fbc-bar-inner {
-  max-width: 1340px;
-  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -766,26 +764,24 @@
 
 /* ─── Адаптив ───────────────────────────────────────────────────────────── */
 
+/* 961–1200 px: сетка Тильды 940 px, промежуток колонок 20 px */
 @media screen and (max-width: 1200px) {
-  .fbc-wrapper {
-    padding-left: 30px;
-    padding-right: 30px;
-  }
-
-  .fbc-bar {
-    padding-left: 30px;
-    padding-right: 30px;
-  }
-
   .fbc-grid {
-    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: var(--l);
+  }
+}
+
+/* до 960 px: сетка Тильды 640 px, у колонки поля по 20 px */
+@media screen and (max-width: 960px) {
+  .fbc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--l);
   }
 }
 
 @media screen and (max-width: 640px) {
   .fbc-wrapper {
-    padding: calc(var(--l) * 2) var(--m) var(--l);
+    padding: calc(var(--l) * 2) 0 var(--l);
   }
 
   .fbc-title {
@@ -805,8 +801,8 @@
   .fbc-chips {
     flex-wrap: nowrap;
     overflow-x: auto;
-    margin: 0 calc(var(--m) * -1);
-    padding: 0 var(--m) 4px;
+    margin: 0 calc(var(--l) * -1); /* до краёв экрана: поля колонки Тильды — 20 px */
+    padding: 0 var(--l) 4px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -819,8 +815,8 @@
   .fbc-day-list {
     flex-wrap: nowrap;
     overflow-x: auto;
-    margin: 0 calc(var(--m) * -1);
-    padding: 8px var(--m) 4px;
+    margin: 0 calc(var(--l) * -1);
+    padding: 8px var(--l) 4px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -901,7 +897,7 @@
   }
 
   .fbc-bar {
-    padding: var(--s) var(--m);
+    padding: var(--s) 0;
   }
 
   .fbc-bar-summary {
