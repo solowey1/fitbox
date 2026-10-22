@@ -154,6 +154,93 @@
   outline-offset: 2px;
 }
 
+/* ─── Дни доставки «Выберите день» (блок создаёт constructor.js) ────────── */
+
+.fbc-days {
+  margin-bottom: calc(var(--xl) * 1.5);
+}
+
+.fbc-day-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s);
+}
+
+.fbc-day {
+  position: relative;
+  min-width: 72px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--dark);
+  background: var(--surface);
+  border: 1px solid var(--surface);
+  border-radius: var(--m);
+  cursor: pointer;
+  transition: all .2s ease-in-out;
+}
+
+.fbc-day:hover {
+  border-color: var(--green);
+}
+
+.fbc-day.is-active {
+  color: var(--light);
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.fbc-day:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.fbc-day-weekday {
+  font-size: 12px;
+  line-height: 15px;
+  opacity: .7;
+}
+
+.fbc-day-date {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* сколько блюд уже выбрано на этот день */
+.fbc-day-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  color: var(--light);
+  background: var(--dark);
+  border-radius: 10px;
+}
+
+.fbc-day.is-active .fbc-day-count {
+  color: var(--green);
+  background: var(--light);
+  box-shadow: 0 0 0 1px var(--green);
+}
+
+.fbc-days-note {
+  margin: var(--s) 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e5383b;
+}
+
 /* ─── Загрузка, ошибки, пусто ───────────────────────────────────────────── */
 
 .fbc-status {
@@ -461,6 +548,14 @@
   color: var(--grey-3);
 }
 
+/* итог по всем дням (строку создаёт constructor.js) */
+.fbc-bar-all {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dark-1);
+}
+
 .fbc-bar-button {
   padding: var(--m) calc(var(--m) * 2);
   font-size: 16px;
@@ -692,6 +787,30 @@
 
   .fbc-chips::-webkit-scrollbar {
     display: none;
+  }
+
+  /* дни — тоже в одну строку с прокруткой; сверху место под счётчик блюд */
+  .fbc-day-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(var(--m) * -1);
+    padding: 8px var(--m) 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fbc-day-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fbc-day {
+    flex: none;
+    min-width: 64px;
+    padding: 8px 10px;
+  }
+
+  .fbc-days {
+    margin-bottom: calc(var(--l) * 1.5);
   }
 
   .fbc-chip {
