@@ -654,6 +654,7 @@
 
   const buildLayout = () => {
     const root = state.root;
+    ui.filters = root.querySelector('.fbc-filters');
     ui.chips = root.querySelector('.fbc-chips');
     ui.sections = root.querySelector('.fbc-sections');
     ui.status = root.querySelector('.fbc-status');
@@ -677,6 +678,9 @@
       state.mealTypes = data.mealTypes || [];
       state.dishes = data.dishes || [];
       state.dishesById = new Map(state.dishes.map(dish => [dish.id, dish]));
+
+      // без блюд нечего фильтровать — пустой заголовок «Выберите приемы» не показываем
+      ui.filters.hidden = !state.dishes.length;
 
       if (!state.dishes.length) {
         showStatus(CONFIG.texts.empty);
@@ -704,7 +708,7 @@
     // data-city в разметке надёжнее поддомена: на предпросмотре Тильды (*.tilda.ws) поддомена города нет
     const city = state.root.getAttribute('data-city') || getSiteCity();
     if (!isCityAllowed(city)) {
-      state.root.querySelector('.fbc-filters').hidden = true;
+      ui.filters.hidden = true;
       showStatus(CONFIG.texts.unavailable);
       return;
     }
@@ -728,7 +732,7 @@
   else init();
 
   window.FITBOX_CONSTRUCTOR = {
-    VERSION: 'fitbox-1.0.0',
+    VERSION: 'fitbox-1.0.1',
     CONFIG,
     reload: () => state.root && start(),
     debug: () => ({
