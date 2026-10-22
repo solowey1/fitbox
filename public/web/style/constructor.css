@@ -24,13 +24,16 @@
   --grey: #e6e6e6;
   --grey-1: #a1a1a1;
   --grey-2: #f5f5f5;
+  --grey-3: #717171;
+  --surface: #f2f2f2; /* карточки, фильтры, итоговая плашка — как в меню программ */
+  --green: #3eb352;   /* выбранный фильтр, «Добавить», «Оформить» */
 }
 
 .fbc {
   position: relative;
   width: 100%;
-  color: var(--light);
-  background-color: var(--dark);
+  color: var(--dark);
+  background-color: var(--light);
   font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
@@ -66,14 +69,14 @@
   font-size: 40px;
   font-weight: 600;
   line-height: 1.15;
-  color: var(--light);
+  color: var(--dark);
 }
 
 .fbc-subtitle {
   margin: 0;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 /* ─── Фильтр «Выберите приемы» ──────────────────────────────────────────── */
@@ -95,7 +98,7 @@
   line-height: 15px;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--grey);
+  color: var(--dark);
 }
 
 .fbc-choose-line {
@@ -120,24 +123,22 @@
   font-weight: 500;
   line-height: 17px;
   white-space: nowrap;
-  color: var(--light);
-  background: transparent;
-  border: 1px solid var(--light);
+  color: var(--dark);
+  background: var(--surface);
+  border: 1px solid var(--surface);
   border-radius: 40px;
   cursor: pointer;
   transition: all .2s ease-in-out;
 }
 
 .fbc-chip:hover {
-  color: var(--light);
-  background: var(--primary);
-  border-color: var(--primary);
+  border-color: var(--green);
 }
 
 .fbc-chip.is-active {
-  color: var(--dark);
-  background: var(--light);
-  border-color: var(--light);
+  color: var(--light);
+  background: var(--green);
+  border-color: var(--green);
 }
 
 .fbc-chip-count {
@@ -151,6 +152,93 @@
 .fbc-stepper-btn:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* ─── Дни доставки «Выберите день» (блок создаёт constructor.js) ────────── */
+
+.fbc-days {
+  margin-bottom: calc(var(--xl) * 1.5);
+}
+
+.fbc-day-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s);
+}
+
+.fbc-day {
+  position: relative;
+  min-width: 72px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--dark);
+  background: var(--surface);
+  border: 1px solid var(--surface);
+  border-radius: var(--m);
+  cursor: pointer;
+  transition: all .2s ease-in-out;
+}
+
+.fbc-day:hover {
+  border-color: var(--green);
+}
+
+.fbc-day.is-active {
+  color: var(--light);
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.fbc-day:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.fbc-day-weekday {
+  font-size: 12px;
+  line-height: 15px;
+  opacity: .7;
+}
+
+.fbc-day-date {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* сколько блюд уже выбрано на этот день */
+.fbc-day-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+  color: var(--light);
+  background: var(--dark);
+  border-radius: 10px;
+}
+
+.fbc-day.is-active .fbc-day-count {
+  color: var(--green);
+  background: var(--light);
+  box-shadow: 0 0 0 1px var(--green);
+}
+
+.fbc-days-note {
+  margin: var(--s) 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e5383b;
 }
 
 /* ─── Загрузка, ошибки, пусто ───────────────────────────────────────────── */
@@ -168,13 +256,13 @@
   margin: 0;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--grey);
+  color: var(--grey-3);
 }
 
 .fbc-loader {
   width: 32px;
   height: 32px;
-  border: 4px solid var(--dark-1);
+  border: 4px solid var(--grey);
   border-bottom-color: var(--primary);
   border-radius: 50%;
   display: inline-block;
@@ -205,12 +293,12 @@
   font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--light);
+  color: var(--dark);
 }
 
 .fbc-section-count {
   font-size: 14px;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 .fbc-grid {
@@ -226,7 +314,7 @@
   flex-direction: column;
   padding: var(--m);
   color: var(--dark);
-  background-color: var(--light);
+  background-color: var(--surface);
   border-radius: var(--xl);
   outline: 1px solid transparent;
   outline-offset: 0;
@@ -269,7 +357,7 @@
 }
 
 .fbc-card-image.is-loaded {
-  background-color: var(--light);
+  background-color: transparent;
   animation: none;
 }
 
@@ -294,7 +382,7 @@
 .fbc-card-meta {
   margin-bottom: 4px;
   font-size: 12px;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 .fbc-card-nutrition {
@@ -348,27 +436,27 @@
   line-height: 1;
   white-space: nowrap;
   color: var(--light);
-  background: var(--primary);
-  border: 1px solid var(--primary);
+  background: var(--green);
+  border: 1px solid var(--green);
   border-radius: 40px;
   cursor: pointer;
   transition: all .2s ease-in-out;
 }
 
 .fbc-btn:hover {
-  color: var(--primary);
+  color: var(--green);
   background: transparent;
 }
 
 .fbc-btn-outline {
-  color: var(--light);
+  color: var(--dark);
   background: transparent;
-  border-color: var(--light);
+  border-color: var(--dark);
 }
 
 .fbc-btn-outline:hover {
-  color: var(--dark);
-  background: var(--light);
+  color: var(--light);
+  background: var(--dark);
 }
 
 .fbc-stepper-controls {
@@ -376,7 +464,7 @@
   align-items: center;
   gap: var(--xs);
   padding: 4px;
-  background: var(--grey-2);
+  background: var(--light);
   border-radius: 40px;
 }
 
@@ -399,7 +487,7 @@
   font-size: 20px;
   line-height: 1;
   color: var(--dark);
-  background: var(--light);
+  background: var(--surface);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -408,7 +496,7 @@
 
 .fbc-stepper-btn:hover {
   color: var(--light);
-  background: var(--primary);
+  background: var(--green);
 }
 
 .fbc-stepper-count {
@@ -425,10 +513,11 @@
   bottom: 0;
   z-index: 50;
   padding: var(--s) 55px var(--s) 45px;
-  background: rgba(18, 18, 18, .92);
+  color: var(--dark);
+  background: rgba(242, 242, 242, .95);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  border-top: 1px solid var(--dark-1);
+  box-shadow: 0 -4px 20px rgba(18, 18, 18, .08);
 }
 
 .fbc-bar-inner {
@@ -442,21 +531,35 @@
 
 .fbc-bar-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: var(--s);
+  gap: 2px var(--s);
   font-size: 18px;
   font-weight: 600;
 }
 
+/* сумма не рвётся: если не помещается рядом с днём — уходит строкой ниже целиком */
+.fbc-bar-total {
+  white-space: nowrap;
+}
+
 .fbc-bar-count {
-  color: var(--grey);
+  color: var(--dark-1);
   font-weight: 500;
 }
 
 .fbc-bar-nutrition {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--grey-1);
+  color: var(--grey-3);
+}
+
+/* итог по всем дням (строку создаёт constructor.js) */
+.fbc-bar-all {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dark-1);
 }
 
 .fbc-bar-button {
@@ -690,6 +793,30 @@
 
   .fbc-chips::-webkit-scrollbar {
     display: none;
+  }
+
+  /* дни — тоже в одну строку с прокруткой; сверху место под счётчик блюд */
+  .fbc-day-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(var(--m) * -1);
+    padding: 8px var(--m) 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fbc-day-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fbc-day {
+    flex: none;
+    min-width: 64px;
+    padding: 8px 10px;
+  }
+
+  .fbc-days {
+    margin-bottom: calc(var(--l) * 1.5);
   }
 
   .fbc-chip {

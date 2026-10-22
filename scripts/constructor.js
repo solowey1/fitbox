@@ -2,18 +2,29 @@
  * constructor.js
  *
  * Конструктор «Собери своё меню» для Tilda.
- * Блюда и приёмы пищи — с бэкенда (GET /api/tilda/constructor), выбранные блюда
- * лежат в корзине Тильды (T706) с артикулом D<id>.
+ * Блюда и приёмы пищи — с бэкенда (GET /api/tilda/constructor). Блюда выбираются
+ * на конкретные дни доставки и лежат в корзине Тильды (T706):
+ * артикул D<id>-<ГГГГММДД>, опции «Дата доставки», «Вес», «КБЖУ».
  *
  * Два режима:
  * - на странице есть #constructor — рисуем конструктор (только в городах из CONFIG.cities);
- * - на любой странице — следим за корзиной: если в ней блюда конструктора, а в поле
- *   «Город» выбран город, где конструктор не работает, отправка заказа блокируется.
+ * - на любой странице — работаем с корзиной: группируем блюда конструктора по датам,
+ *   блокируем заказ, если выбран город без конструктора или дата доставки уже недоступна.
+ *
+ * Даты доставки считает delivery-date.js (window.NCDM_DELIVERY); если его нет на странице,
+ * скрипт подгружается сам.
  *
  * Проверка в консоли: FITBOX_CONSTRUCTOR.VERSION, FITBOX_CONSTRUCTOR.debug()
  */
 (() => {
   'use strict';
+
+  // Второй экземпляр этой версии на странице ничего не делает.
+  // Свой флаг, а не FITBOX_CONSTRUCTOR: его выставляют и старые копии скрипта.
+  // По той же причине классы блокировки заказа отличаются от старых (fbc-submit-locked):
+  // старая копия, вставленная на страницу, не должна снимать нашу блокировку.
+  if (window.__FITBOX_CONSTRUCTOR_LOADED__) return;
+  window.__FITBOX_CONSTRUCTOR_LOADED__ = true;
 
   // ==================== НАСТРОЙКИ ====================
 
@@ -34,21 +45,35 @@
 
     containerSelector: '#constructor',
     cartFormSelector: '.t706 form',
+    cartListSelector: '.t706__cartwin-products, .t706__sidebar-products, .t706__cartpage-products',
     citySelector: 'select[name="city"]',
+    dateFieldSelector: 'input[name="date"]',
     submitSelector: 'button[type="submit"], input[type="submit"], .t-submit',
 
     skuPrefix: 'D',
+    daysToShow: 7,       // сколько ближайших дней доставки показывать
     allLabel: 'Все',
     thumbnailWidth: 600, // ширина фото в карточке, px (карточка ~240 px, запас под ретину)
+
+    // Названия опций товара в корзине Тильды (видны покупателю и в письме с заказом)
+    optionLabels: {
+      date: 'Дата доставки',
+      weight: 'Вес',
+      nutrition: 'КБЖУ'
+    },
 
     texts: {
       unavailable: 'Конструктор меню пока работает только в Казани.',
       empty: 'Скоро здесь появятся блюда. Загляните чуть позже.',
       error: 'Не удалось загрузить меню.',
+      noDates: 'Не удалось загрузить даты доставки.',
       retry: 'Попробовать ещё раз',
+      daysTitle: 'Выберите день',
       cityLocked: 'Блюда из конструктора пока доставляем только в Казань. Выберите Казань или уберите эти блюда из корзины.',
+      staleDates: 'Доставка уже недоступна на {dates}. Уберите блюда на эти дни из корзины и выберите их на другой день.',
+      staleInConstructor: 'В корзине есть блюда на {dates} — доставка на эти дни уже недоступна.',
       add: 'Добавить',
-      checkout: 'Оформить',
+      dayEmpty: 'пока пусто',
       noNutrition: 'КБЖУ уточняется'
     }
   };
@@ -81,7 +106,77 @@
 
   const isCityAllowed = (city) => CONFIG.cities.indexOf(city) !== -1;
 
-  const isConstructorSku = (sku) => new RegExp(`^${CONFIG.skuPrefix}\\d+$`, 'i').test(String(sku || ''));
+  // ---------- даты ----------
+
+  /** 'ГГГГ-ММ-ДД' -> Date в UTC-полночь (как в delivery-date.js) */
+  const isoToDate = iso => new Date(`${iso}T00:00:00Z`);
+
+  const formatDate = (iso, options) => new Intl.DateTimeFormat('ru-RU', { timeZone: 'UTC', ...options })
+    .format(isoToDate(iso));
+
+  const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);
+
+  /** «Пятница, 23 октября» */
+  const formatDayLong = iso => capitalize(`${formatDate(iso, { weekday: 'long' })}, ${formatDate(iso, { day: 'numeric', month: 'long' })}`);
+
+  /** «Пт, 23 октября» */
+  const formatDayShort = iso => capitalize(`${formatDate(iso, { weekday: 'short' })}, ${formatDate(iso, { day: 'numeric', month: 'long' })}`);
+
+  /** «23.10.2026» — формат поля даты в корзине */
+  const formatDayField = iso => iso.split('-').reverse().join('.');
+
+  // ---------- артикул ----------
+
+  /** D124-20261023: блюдо 124 на 23 октября 2026 */
+  const skuFor = (dish, iso) => `${CONFIG.skuPrefix}${dish.id}-${iso.replace(/-/g, '')}`;
+
+  const parseSku = (sku) => {
+    const match = new RegExp(`^${CONFIG.skuPrefix}(\\d+)(?:-(\\d{4})(\\d{2})(\\d{2}))?$`, 'i').exec(String(sku || ''));
+    if (!match) return null;
+    return {
+      dishId: parseInt(match[1], 10),
+      iso: match[2] ? `${match[2]}-${match[3]}-${match[4]}` : null
+    };
+  };
+
+  // ==================== ДАТЫ ДОСТАВКИ ====================
+
+  /**
+   * Ядро расчёта дат — delivery-date.js. Обычно он уже подключён на сайте
+   * (календарь в корзине), иначе подгружаем его с того же сервера, что и API.
+   */
+  let deliveryCorePromise = null;
+
+  const loadDeliveryCore = (apiBaseUrl) => {
+    if (window.NCDM_DELIVERY) return Promise.resolve(window.NCDM_DELIVERY);
+    if (deliveryCorePromise) return deliveryCorePromise;
+
+    deliveryCorePromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = `${new URL(apiBaseUrl).origin}/scripts/delivery-date.js`;
+      script.onload = () => (window.NCDM_DELIVERY ? resolve(window.NCDM_DELIVERY) : reject(new Error('NCDM_DELIVERY не найден')));
+      script.onerror = () => {
+        deliveryCorePromise = null;
+        reject(new Error('delivery-date.js не загрузился'));
+      };
+      document.head.appendChild(script);
+    });
+
+    return deliveryCorePromise;
+  };
+
+  /** Ближайшие дни, на которые можно заказать доставку в городе */
+  const getDeliveryDays = (core, city) => {
+    const days = [];
+    const DAY = 86400000;
+    const min = core.getMinDeliveryDate(city);
+    if (min === null || isNaN(min)) return days;
+
+    for (let ts = min, guard = 0; days.length < CONFIG.daysToShow && guard < 60; ts += DAY, guard++) {
+      if (core.isDateAllowed(city, ts)) days.push(core.toISO(ts));
+    }
+    return days;
+  };
 
   // ==================== КОРЗИНА ТИЛЬДЫ ====================
 
@@ -90,6 +185,42 @@
    * в подсчётах он уже не участвует — как и у самой Тильды
    */
   const isInCart = product => product && product.deleted !== 'yes' && (parseInt(product.quantity, 10) || 0) > 0;
+
+  /** Свои действия после функций корзины Тильды: она вызывает их по глобальному имени */
+  const afterTildaCall = (name, callback) => {
+    const hook = () => {
+      const original = window[name];
+      if (typeof original !== 'function') return false;
+
+      // уже обёрнута этой версией — добавляем обработчик в общий список
+      // (флаг старых копий _fbcHooked не учитываем: их обработчики про новые артикулы не знают)
+      if (original._fbcCallbacks) {
+        original._fbcCallbacks.push(callback);
+        return true;
+      }
+
+      const callbacks = [callback];
+      const wrapped = function () {
+        const result = original.apply(this, arguments);
+        callbacks.forEach(cb => cb());
+        return result;
+      };
+      wrapped._fbcCallbacks = callbacks;
+      window[name] = wrapped;
+      return true;
+    };
+
+    // скрипт корзины Тильда подгружает асинхронно
+    if (!hook()) {
+      const timer = setInterval(() => {
+        if (hook()) {
+          clearInterval(timer);
+          callback();
+        }
+      }, 300);
+      setTimeout(() => clearInterval(timer), 30000);
+    }
+  };
 
   const cart = {
     isReady() {
@@ -106,8 +237,18 @@
       ), 0);
     },
 
-    constructorProducts() {
-      return this.products().filter(product => isInCart(product) && isConstructorSku(product.sku));
+    /** Блюда конструктора в корзине: { product, dishId, iso, quantity } */
+    constructorItems() {
+      return this.products().reduce((items, product) => {
+        if (!isInCart(product)) return items;
+        const parsed = parseSku(product.sku);
+        if (parsed) items.push({ product, dishId: parsed.dishId, iso: parsed.iso, quantity: parseInt(product.quantity, 10) });
+        return items;
+      }, []);
+    },
+
+    hasOtherProducts() {
+      return this.products().some(product => isInCart(product) && !parseSku(product.sku));
     },
 
     /** Перерисовать корзину и сохранить — то же, что делает Тильда после своих изменений */
@@ -118,7 +259,22 @@
       });
     },
 
-    add(dish, quantity) {
+    options(dish, iso) {
+      const options = [
+        { option: CONFIG.optionLabels.date, variant: formatDayLong(iso) },
+        { option: CONFIG.optionLabels.weight, variant: `${dish.weight} г` }
+      ];
+      if (dish.nutrition) {
+        const p = dish.nutrition.portion;
+        options.push({
+          option: CONFIG.optionLabels.nutrition,
+          variant: `${p.calories} ккал, Б ${p.proteins} / Ж ${p.fats} / У ${p.carbohydrates}`
+        });
+      }
+      return options;
+    },
+
+    add(dish, iso, quantity) {
       // Корзина с «открывать после добавления» открывалась бы на каждый «+»:
       // атрибут проверяется синхронно внутри tcart__addProduct, поэтому снимаем его на время вызова
       const cartBlock = document.querySelector('.t706');
@@ -130,9 +286,9 @@
           name: dish.title,
           price: dish.price,
           quantity,
-          sku: dish.sku,
+          sku: skuFor(dish, iso),
           img: dish.image || '',
-          options: [],
+          options: this.options(dish, iso),
           url: window.location.href.split('#')[0]
         });
       } finally {
@@ -145,18 +301,19 @@
       });
     },
 
-    setQuantity(dish, quantity) {
+    setQuantity(dish, iso, quantity) {
       if (!this.isReady()) return;
 
       if (typeof window.tcart__syncProductsObject__LStoObj === 'function') {
         window.tcart__syncProductsObject__LStoObj();
       }
 
+      const sku = skuFor(dish, iso);
       const products = this.products();
-      const index = products.findIndex(product => product && String(product.sku) === dish.sku);
+      const index = products.findIndex(product => product && String(product.sku) === sku);
 
       if (index === -1) {
-        if (quantity > 0) this.add(dish, quantity);
+        if (quantity > 0) this.add(dish, iso, quantity);
         return;
       }
 
@@ -179,36 +336,9 @@
       if (typeof window.tcart__openCart === 'function') window.tcart__openCart();
     },
 
-    /**
-     * Узнаём о любых изменениях корзины (в том числе из самой корзины Тильды):
-     * все они заканчиваются вызовом tcart__saveLocalObj
-     */
+    /** Любое изменение корзины (в том числе из самой корзины Тильды) заканчивается tcart__saveLocalObj */
     onChange(callback) {
-      const hook = () => {
-        const original = window.tcart__saveLocalObj;
-        if (typeof original !== 'function') return false;
-        if (original._fbcHooked) return true;
-
-        const wrapped = function () {
-          const result = original.apply(this, arguments);
-          callback();
-          return result;
-        };
-        wrapped._fbcHooked = true;
-        window.tcart__saveLocalObj = wrapped;
-        return true;
-      };
-
-      // скрипт корзины Тильда подгружает асинхронно
-      if (!hook()) {
-        const timer = setInterval(() => {
-          if (hook()) {
-            clearInterval(timer);
-            callback();
-          }
-        }, 300);
-        setTimeout(() => clearInterval(timer), 30000);
-      }
+      afterTildaCall('tcart__saveLocalObj', callback);
 
       // изменения корзины в другой вкладке
       window.addEventListener('storage', (event) => {
@@ -221,56 +351,210 @@
     }
   };
 
-  // ==================== ЗАЩИТА КОРЗИНЫ ПО ГОРОДУ ====================
+  // ==================== КОРЗИНА: ГРУППЫ ПО ДАТАМ ====================
 
   /**
-   * Блюда конструктора можно заказать только в городах из CONFIG.cities.
-   * Блокируем отправку своим классом и перехватом клика/submit — так не мешаем
-   * календарю доставки, который управляет disabled у той же кнопки.
+   * После каждой перерисовки корзины раскладываем блюда конструктора по датам
+   * под заголовками «Пятница, 23 октября». Массив товаров Тильды не трогаем —
+   * только переставляем готовые строки, у них остаются data-cart-product-i и обработчики.
+   * В строке блюда прячем артикул и дату (она в заголовке), вес и КБЖУ остаются.
    */
-  const cityGuard = {
-    check() {
-      const hasDishes = cart.constructorProducts().length > 0;
+  const cartView = {
+    injectStyles() {
+      if (document.getElementById('fbc-cart-styles')) return;
+      const style = document.createElement('style');
+      style.id = 'fbc-cart-styles';
+      style.textContent = [
+        '.fbc-cart-date{margin:24px 0 4px;padding-bottom:8px;font-size:16px;font-weight:600;',
+        'line-height:1.3;border-bottom:1px solid rgba(0,0,0,.1);}',
+        '.fbc-cart-date:first-child{margin-top:0;}',
+        '.t706__product-title__option .fbc-hidden,.t706__product-title__option.fbc-hidden{display:none !important;}'
+      ].join('');
+      document.head.appendChild(style);
+    },
 
-      document.querySelectorAll(CONFIG.cartFormSelector).forEach((form) => {
-        const select = form.querySelector(CONFIG.citySelector);
-        if (!select) return;
+    decorate() {
+      const products = cart.products();
+      const dateLabel = `${CONFIG.optionLabels.date}:`;
 
-        const locked = hasDishes && !isCityAllowed(select.value);
-        const group = select.closest('.t-input-group') || select.parentNode;
-        let message = group.querySelector('.fbc-city-error');
+      document.querySelectorAll(CONFIG.cartListSelector).forEach((list) => {
+        list.querySelectorAll('.fbc-cart-date').forEach(header => header.remove());
 
-        if (locked && !message) {
-          message = el('div', 'fbc-city-error t-text', CONFIG.texts.cityLocked);
-          group.appendChild(message);
-        } else if (!locked && message) {
-          message.remove();
-        }
+        const rows = Array.prototype.filter.call(list.children, row => row.classList.contains('t706__product'));
+        const others = [];
+        const groups = new Map();
 
-        form.querySelectorAll(CONFIG.submitSelector).forEach((button) => {
-          button.classList.toggle('fbc-submit-locked', locked);
+        rows.forEach((row) => {
+          const product = products[parseInt(row.getAttribute('data-cart-product-i'), 10)];
+          const parsed = product && parseSku(product.sku);
+          if (!parsed || !parsed.iso) {
+            others.push(row);
+            return;
+          }
+
+          row.querySelectorAll('.t706__product-title__option').forEach((option) => {
+            if (option.textContent.trim() === String(product.sku)) option.classList.add('fbc-hidden');
+            option.querySelectorAll('div').forEach((line) => {
+              if (line.textContent.trim().indexOf(dateLabel) === 0) line.classList.add('fbc-hidden');
+            });
+          });
+
+          if (!groups.has(parsed.iso)) groups.set(parsed.iso, []);
+          groups.get(parsed.iso).push(row);
         });
-        form.classList.toggle('fbc-form-locked', locked);
+
+        if (!groups.size) return;
+
+        this.injectStyles();
+        // остальные товары (программы) — первыми, затем дни по порядку
+        others.forEach(row => list.appendChild(row));
+        Array.from(groups.keys()).sort().forEach((iso) => {
+          list.appendChild(el('div', 'fbc-cart-date t-name', formatDayLong(iso)));
+          groups.get(iso).forEach(row => list.appendChild(row));
+        });
       });
     },
 
     init() {
+      afterTildaCall('tcart__reDrawProducts', () => this.decorate());
+    }
+  };
+
+  // ==================== КОРЗИНА: ПРОВЕРКИ ПЕРЕД ЗАКАЗОМ ====================
+
+  /**
+   * - блюда конструктора можно заказать только в городах из CONFIG.cities;
+   * - день доставки блюда должен быть ещё доступен (после 14:00 ближайший день уходит);
+   * - если в корзине только блюда конструктора, общее поле «Дата доставки» не нужно:
+   *   у каждого блюда своя дата. Поле скрываем и подставляем самую раннюю дату.
+   * Отправку блокируем своим классом и перехватом клика/submit — так не мешаем
+   * календарю доставки, который управляет disabled у той же кнопки.
+   */
+  const cartGuard = {
+    setMessage(form, key, anchor, text) {
+      let message = form.querySelector(`.fbc-cart-error[data-key="${key}"]`);
+      if (text && !message) {
+        message = el('div', 'fbc-cart-error t-text', text);
+        message.setAttribute('data-key', key);
+        anchor.parentNode.insertBefore(message, anchor.nextSibling);
+      } else if (text) {
+        message.textContent = text;
+      } else if (message) {
+        message.remove();
+      }
+    },
+
+    syncDateField(form, items) {
+      const input = form.querySelector(CONFIG.dateFieldSelector);
+      if (!input) return;
+      const group = input.closest('.t-input-group') || input.parentNode;
+
+      const onlyConstructor = items.length > 0 && !cart.hasOtherProducts();
+      const dates = items.map(item => item.iso).filter(Boolean).sort();
+
+      // Календарь доставки (Litepicker) при пересчёте переписывает поле своей выбранной датой,
+      // поэтому дату ставим через него, а без календаря — прямо в поле
+      const picker = input._ncdmPicker;
+
+      // скрываем классом с !important: на сайте у поля бывает своё display: block !important
+      if (onlyConstructor && dates.length) {
+        group.classList.add('fbc-hidden-field');
+
+        const [year, month, day] = dates[0].split('-').map(Number);
+        if (picker) {
+          const current = picker.getDate();
+          const date = current && (current.toJSDate ? current.toJSDate() : current);
+          const same = date && date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+          if (!same) picker.setDate(new Date(year, month - 1, day));
+        } else {
+          input.value = formatDayField(dates[0]);
+        }
+      } else if (group.classList.contains('fbc-hidden-field')) {
+        group.classList.remove('fbc-hidden-field');
+        if (picker) picker.clearSelection();
+        input.value = '';
+      }
+
+      // календарь доставки пересчитает блокировку кнопки с учётом скрытого поля
+      if (window.NCDM_DELIVERY_PICKER) window.NCDM_DELIVERY_PICKER.scan();
+    },
+
+    check() {
+      const items = cart.constructorItems();
+      const core = window.NCDM_DELIVERY;
+
+      document.querySelectorAll(CONFIG.cartFormSelector).forEach((form) => {
+        const select = form.querySelector(CONFIG.citySelector);
+        const city = select ? select.value : getSiteCity();
+        const submit = form.querySelector(CONFIG.submitSelector);
+
+        const wrongCity = items.length > 0 && !isCityAllowed(city);
+
+        // даты, на которые доставка уже недоступна
+        const stale = wrongCity || !core ? [] : Array.from(new Set(
+          items.filter(item => item.iso && !core.isDateAllowed(city, item.iso)).map(item => item.iso)
+        )).sort();
+
+        if (select) {
+          const anchor = select.closest('.t-input-group') || select;
+          this.setMessage(form, 'city', anchor.lastElementChild || anchor, wrongCity ? CONFIG.texts.cityLocked : '');
+        }
+
+        if (submit) {
+          const anchor = submit.closest('.t-form__submit') || submit;
+          const text = stale.length ? CONFIG.texts.staleDates.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ')) : '';
+          this.setMessage(form, 'dates', anchor.previousElementSibling || anchor, text);
+        }
+
+        const locked = wrongCity || stale.length > 0;
+        form.querySelectorAll(CONFIG.submitSelector).forEach((button) => {
+          button.classList.toggle('fbc-order-locked', locked);
+        });
+        form.classList.toggle('fbc-order-form-locked', locked);
+
+        this.syncDateField(form, items);
+      });
+    },
+
+    injectStyles() {
+      if (document.getElementById('fbc-guard-styles')) return;
+      const style = document.createElement('style');
+      style.id = 'fbc-guard-styles';
+      style.textContent = [
+        '.fbc-cart-error{margin:8px 0;font-size:13px;line-height:1.4;color:#e5383b;}',
+        '.t706 form .t-input-group.fbc-hidden-field{display:none !important;}',
+        '.fbc-order-locked{opacity:.45 !important;pointer-events:none !important;cursor:not-allowed !important;}'
+      ].join('');
+      document.head.appendChild(style);
+    },
+
+    init() {
+      this.injectStyles();
+
       document.addEventListener('change', (event) => {
         if (event.target.matches && event.target.matches(CONFIG.citySelector)) this.check();
       }, true);
 
       document.addEventListener('click', (event) => {
         const button = event.target.closest && event.target.closest(CONFIG.submitSelector);
-        if (!button || !button.classList.contains('fbc-submit-locked')) return;
+        if (!button) return;
+
+        // перед проверкой формы Тильдой: заполнить скрытое поле даты, учесть отсечку
+        this.check();
+
+        if (!button.classList.contains('fbc-order-locked')) return;
         event.preventDefault();
         event.stopPropagation();
       }, true);
 
       document.addEventListener('submit', (event) => {
-        if (!event.target.classList || !event.target.classList.contains('fbc-form-locked')) return;
+        if (!event.target.classList || !event.target.classList.contains('fbc-order-form-locked')) return;
         event.preventDefault();
         event.stopPropagation();
       }, true);
+
+      // наступление отсечки на открытой странице
+      setInterval(() => this.check(), 60000);
 
       this.check();
     }
@@ -280,6 +564,9 @@
 
   const state = {
     root: null,
+    city: null,
+    days: [],           // ['2026-10-23', ...] — ближайшие дни доставки
+    selectedDay: null,
     mealTypes: [],
     dishes: [],
     dishesById: new Map(),
@@ -350,7 +637,9 @@
     return image;
   };
 
-  // ---------- счётчик +/- ----------
+  // ---------- счётчик +/- (на выбранный день) ----------
+
+  const dishQuantity = dish => cart.quantity(skuFor(dish, state.selectedDay));
 
   const createStepper = (dish) => {
     const wrapper = el('div', 'fbc-stepper');
@@ -359,7 +648,7 @@
     addButton.type = 'button';
     addButton.addEventListener('click', (event) => {
       event.stopPropagation();
-      cart.setQuantity(dish, 1);
+      cart.setQuantity(dish, state.selectedDay, 1);
     });
 
     const minus = el('button', 'fbc-stepper-btn', '−');
@@ -367,7 +656,7 @@
     minus.setAttribute('aria-label', `Убрать одно: ${dish.title}`);
     minus.addEventListener('click', (event) => {
       event.stopPropagation();
-      cart.setQuantity(dish, cart.quantity(dish.sku) - 1);
+      cart.setQuantity(dish, state.selectedDay, dishQuantity(dish) - 1);
     });
 
     const count = el('span', 'fbc-stepper-count', '0');
@@ -378,7 +667,7 @@
     plus.setAttribute('aria-label', `Добавить ещё: ${dish.title}`);
     plus.addEventListener('click', (event) => {
       event.stopPropagation();
-      cart.setQuantity(dish, cart.quantity(dish.sku) + 1);
+      cart.setQuantity(dish, state.selectedDay, dishQuantity(dish) + 1);
     });
 
     const controls = el('div', 'fbc-stepper-controls');
@@ -485,7 +774,7 @@
     }
 
     body.append(el('h3', 'fbc-dialog-title', dish.title));
-    body.append(el('div', 'fbc-dialog-meta', `${dish.weight} г`));
+    body.append(el('div', 'fbc-dialog-meta', `${dish.weight} г · доставка ${formatDayShort(state.selectedDay)}`));
 
     if (dish.nutrition) {
       body.append(nutritionGrid(`На порцию ${dish.weight} г`, dish.nutrition.portion));
@@ -507,7 +796,7 @@
 
     const footer = el('div', 'fbc-dialog-footer');
     const stepper = createStepper(dish);
-    updateStepper(stepper, cart.quantity(dish.sku));
+    updateStepper(stepper, dishQuantity(dish));
     footer.append(price, stepper);
 
     dialog.append(close, body, footer);
@@ -521,6 +810,65 @@
     document.body.append(dialog);
     state.dialog = dialog;
     dialog.showModal();
+  };
+
+  // ---------- дни доставки ----------
+
+  /** Блок «Выберите день» — создаём сами, чтобы не менять разметку на странице */
+  const ensureDaysBlock = () => {
+    let block = state.root.querySelector('.fbc-days');
+    if (block) return block;
+
+    block = el('div', 'fbc-days');
+    const choose = el('div', 'fbc-choose');
+    choose.append(el('span', null, CONFIG.texts.daysTitle), el('div', 'fbc-choose-line'));
+    const list = el('div', 'fbc-day-list');
+    list.setAttribute('role', 'group');
+    list.setAttribute('aria-label', CONFIG.texts.daysTitle);
+    block.append(choose, list, el('p', 'fbc-days-note'));
+
+    ui.filters.parentNode.insertBefore(block, ui.filters);
+    return block;
+  };
+
+  const dayCounts = () => cart.constructorItems().reduce((counts, item) => {
+    if (item.iso) counts.set(item.iso, (counts.get(item.iso) || 0) + item.quantity);
+    return counts;
+  }, new Map());
+
+  const renderDays = () => {
+    ui.dayList.textContent = '';
+    const counts = dayCounts();
+
+    state.days.forEach((iso) => {
+      const chip = el('button', 'fbc-day');
+      chip.type = 'button';
+      const isActive = iso === state.selectedDay;
+      chip.classList.toggle('is-active', isActive);
+      chip.setAttribute('aria-pressed', String(isActive));
+      chip.setAttribute('aria-label', formatDayLong(iso));
+
+      chip.append(
+        el('span', 'fbc-day-weekday', capitalize(formatDate(iso, { weekday: 'short' }))),
+        el('span', 'fbc-day-date', formatDate(iso, { day: 'numeric', month: 'short' }).replace('.', ''))
+      );
+      const count = counts.get(iso) || 0;
+      if (count) chip.append(el('span', 'fbc-day-count', String(count)));
+
+      chip.addEventListener('click', () => {
+        state.selectedDay = iso;
+        renderDays();
+        syncWithCart();
+      });
+      ui.dayList.append(chip);
+    });
+
+    // блюда в корзине на дни, на которые доставка уже недоступна
+    const stale = Array.from(counts.keys()).filter(iso => state.days.indexOf(iso) === -1).sort();
+    ui.daysNote.hidden = !stale.length;
+    ui.daysNote.textContent = stale.length
+      ? CONFIG.texts.staleInConstructor.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', '))
+      : '';
   };
 
   // ---------- фильтр и разделы ----------
@@ -590,45 +938,57 @@
   // ---------- итоговая плашка ----------
 
   const renderBar = () => {
-    let count = 0;
-    let total = 0;
-    const nutrition = { calories: 0, proteins: 0, fats: 0, carbohydrates: 0 };
-    let hasNutrition = false;
+    const items = cart.constructorItems();
 
-    cart.constructorProducts().forEach((product) => {
-      const quantity = parseInt(product.quantity, 10) || 0;
-      const dish = state.dishesById.get(parseInt(String(product.sku).slice(CONFIG.skuPrefix.length), 10));
-
-      count += quantity;
-      total += dish ? dish.price * quantity : (parseFloat(product.amount) || 0);
-
+    const summarize = list => list.reduce((acc, item) => {
+      const dish = state.dishesById.get(item.dishId);
+      acc.count += item.quantity;
+      acc.total += dish ? dish.price * item.quantity : (parseFloat(item.product.amount) || 0);
       if (dish && dish.nutrition) {
-        hasNutrition = true;
-        Object.keys(nutrition).forEach((key) => {
-          nutrition[key] += dish.nutrition.portion[key] * quantity;
+        acc.hasNutrition = true;
+        Object.keys(acc.nutrition).forEach((key) => {
+          acc.nutrition[key] += dish.nutrition.portion[key] * item.quantity;
         });
       }
-    });
+      return acc;
+    }, { count: 0, total: 0, hasNutrition: false, nutrition: { calories: 0, proteins: 0, fats: 0, carbohydrates: 0 } });
 
-    ui.bar.hidden = count === 0;
-    if (!count) return;
+    const all = summarize(items);
+    const day = summarize(items.filter(item => item.iso === state.selectedDay));
+    const daysWithDishes = new Set(items.map(item => item.iso)).size;
 
-    ui.barCount.textContent = `${count} ${plural(count, 'блюдо', 'блюда', 'блюд')}`;
-    ui.barTotal.textContent = formatPrice(total);
-    ui.barNutrition.textContent = hasNutrition
-      ? `${Math.round(nutrition.calories)} ккал · Б ${Math.round(nutrition.proteins)} · Ж ${Math.round(nutrition.fats)} · У ${Math.round(nutrition.carbohydrates)}`
+    ui.bar.hidden = all.count === 0;
+    if (!all.count) return;
+
+    const dayTitle = formatDayShort(state.selectedDay);
+    ui.barCount.textContent = day.count
+      ? `${dayTitle}: ${day.count} ${plural(day.count, 'блюдо', 'блюда', 'блюд')}`
+      : `${dayTitle}: ${CONFIG.texts.dayEmpty}`;
+    ui.barTotal.textContent = day.count ? formatPrice(day.total) : '';
+
+    const n = day.nutrition;
+    ui.barNutrition.textContent = day.hasNutrition
+      ? `${Math.round(n.calories)} ккал · Б ${Math.round(n.proteins)} · Ж ${Math.round(n.fats)} · У ${Math.round(n.carbohydrates)}`
+      : '';
+
+    // итог по всем дням — если выбрано больше одного дня или текущий пуст
+    const showAll = daysWithDishes > 1 || !day.count;
+    ui.barAll.hidden = !showAll;
+    ui.barAll.textContent = showAll
+      ? `Всего: ${all.count} ${plural(all.count, 'блюдо', 'блюда', 'блюд')} на ${daysWithDishes} ${plural(daysWithDishes, 'день', 'дня', 'дней')} · ${formatPrice(all.total)}`
       : '';
   };
 
-  /** Счётчики на карточках и плашка — из корзины Тильды */
+  /** Счётчики на карточках, дни и плашка — из корзины Тильды */
   const syncWithCart = () => {
-    if (!ui.bar) return; // на странице нет конструктора — только защита корзины
+    if (!ui.bar || !state.selectedDay) return; // на странице нет конструктора или он ещё не загружен
 
     state.steppers.forEach((list, dishId) => {
       const dish = state.dishesById.get(dishId);
-      const quantity = dish ? cart.quantity(dish.sku) : 0;
+      const quantity = dish ? dishQuantity(dish) : 0;
       list.forEach(stepper => updateStepper(stepper, quantity));
     });
+    renderDays();
     renderBar();
   };
 
@@ -664,6 +1024,18 @@
     ui.barNutrition = root.querySelector('.fbc-bar-nutrition');
     ui.barButton = root.querySelector('.fbc-bar-button');
 
+    // строка «Всего: …» — создаём сами, чтобы не менять разметку на странице
+    ui.barAll = root.querySelector('.fbc-bar-all');
+    if (!ui.barAll) {
+      ui.barAll = el('div', 'fbc-bar-all');
+      ui.barNutrition.parentNode.appendChild(ui.barAll);
+    }
+
+    const days = ensureDaysBlock();
+    ui.days = days;
+    ui.dayList = days.querySelector('.fbc-day-list');
+    ui.daysNote = days.querySelector('.fbc-days-note');
+
     ui.barButton.addEventListener('click', () => cart.open());
   };
 
@@ -671,31 +1043,44 @@
     showStatus(null);
     ui.sections.textContent = '';
     ui.chips.textContent = '';
+    ui.days.hidden = true;
 
+    let data;
+    let core;
     try {
-      const data = await loadData();
-
-      state.mealTypes = data.mealTypes || [];
-      state.dishes = data.dishes || [];
-      state.dishesById = new Map(state.dishes.map(dish => [dish.id, dish]));
-
-      // без блюд нечего фильтровать — пустой заголовок «Выберите приемы» не показываем
-      ui.filters.hidden = !state.dishes.length;
-
-      if (!state.dishes.length) {
-        showStatus(CONFIG.texts.empty);
-        return;
-      }
-
-      ui.status.hidden = true;
-      renderChips();
-      renderSections();
-      applyFilter();
-      syncWithCart();
+      [data, core] = await Promise.all([loadData(), loadDeliveryCore(apiUrl())]);
     } catch (error) {
       console.error('[constructor]', error);
-      showStatus(CONFIG.texts.error, true);
+      showStatus(window.NCDM_DELIVERY ? CONFIG.texts.error : CONFIG.texts.noDates, true);
+      return;
     }
+
+    state.mealTypes = data.mealTypes || [];
+    state.dishes = data.dishes || [];
+    state.dishesById = new Map(state.dishes.map(dish => [dish.id, dish]));
+    state.days = getDeliveryDays(core, state.city);
+
+    // без блюд нечего фильтровать — пустые блоки «Выберите…» не показываем
+    ui.filters.hidden = !state.dishes.length;
+
+    if (!state.dishes.length) {
+      showStatus(CONFIG.texts.empty);
+      return;
+    }
+    if (!state.days.length) {
+      showStatus(CONFIG.texts.noDates, true);
+      return;
+    }
+
+    if (state.days.indexOf(state.selectedDay) === -1) state.selectedDay = state.days[0];
+
+    ui.status.hidden = true;
+    ui.days.hidden = false;
+    renderChips();
+    renderSections();
+    applyFilter();
+    syncWithCart();
+    cartGuard.check(); // ядро дат могло загрузиться только сейчас
   }
 
   const initConstructor = () => {
@@ -706,41 +1091,56 @@
     buildLayout();
 
     // data-city в разметке надёжнее поддомена: на предпросмотре Тильды (*.tilda.ws) поддомена города нет
-    const city = state.root.getAttribute('data-city') || getSiteCity();
-    if (!isCityAllowed(city)) {
+    state.city = state.root.getAttribute('data-city') || getSiteCity();
+    if (!isCityAllowed(state.city)) {
       ui.filters.hidden = true;
+      ui.days.hidden = true;
       showStatus(CONFIG.texts.unavailable);
       return;
     }
 
     state.imageObserver = initImageObserver();
     start();
+
+    // наступление отсечки на открытой странице: ближайший день мог уйти
+    setInterval(() => {
+      if (!window.NCDM_DELIVERY || !state.dishes.length) return;
+      const days = getDeliveryDays(window.NCDM_DELIVERY, state.city);
+      if (days.join() === state.days.join()) return;
+      state.days = days;
+      if (days.indexOf(state.selectedDay) === -1) state.selectedDay = days[0];
+      syncWithCart();
+    }, 60000);
   };
 
   // ==================== ЗАПУСК ====================
 
   const init = () => {
+
     cart.onChange(() => {
       syncWithCart();
-      cityGuard.check();
+      cartGuard.check();
     });
-    cityGuard.init();
+    cartView.init();
+    cartGuard.init();
     initConstructor();
+
+    window.FITBOX_CONSTRUCTOR = {
+      VERSION: 'fitbox-1.1.0',
+      CONFIG,
+      reload: () => state.root && start(),
+      debug: () => ({
+        pageCity: state.city || getSiteCity(),
+        allowed: isCityAllowed(state.city || getSiteCity()),
+        cartReady: cart.isReady(),
+        dishes: state.dishes.length,
+        days: state.days,
+        selectedDay: state.selectedDay,
+        inCart: cart.constructorItems().map(item => `${item.product.sku} × ${item.quantity}`)
+      })
+    };
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-
-  window.FITBOX_CONSTRUCTOR = {
-    VERSION: 'fitbox-1.0.1',
-    CONFIG,
-    reload: () => state.root && start(),
-    debug: () => ({
-      pageCity: (state.root && state.root.getAttribute('data-city')) || getSiteCity(),
-      allowed: isCityAllowed((state.root && state.root.getAttribute('data-city')) || getSiteCity()),
-      cartReady: cart.isReady(),
-      dishes: state.dishes.length,
-      inCart: cart.constructorProducts().map(p => `${p.sku} × ${p.quantity}`)
-    })
-  };
 })();
