@@ -489,9 +489,67 @@ const getDishDetails = async (req, res) => {
  * - Блюда конструктора: in_constructor, заполнены цена и вес, указан хотя бы один приём
  *
  * КБЖУ на 100 г считается по ингредиентам, КБЖУ порции — пропорционально весу блюда (dishes.weight)
+ *
+ * Query параметры:
+ * - dates: даты через запятую (ГГГГ-ММ-ДД, до 31 шт.) — тогда в ответе availability:
+ *   какие блюда продаются в каждую дату (цикл constructor_menu + исключения на дату),
+ *   а в dishes — только блюда, доступные хотя бы в одну из дат
+ * - city: город (cities.title) — от его даты старта считается неделя цикла;
+ *   по умолчанию первый город
+ * Без dates — все блюда конструктора без привязки к датам (старые версии скрипта).
  */
+const MAX_CONSTRUCTOR_DATES = 31;
+
+const parseConstructorDates = (value) => {
+  if (!value) return null;
+  const dates = String(value).split(',').map(date => date.trim()).filter(Boolean);
+  if (!dates.length || dates.length > MAX_CONSTRUCTOR_DATES) return undefined;
+  const valid = dates.every((date) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+    const parsed = new Date(`${date}T00:00:00Z`);
+    return !isNaN(parsed) && parsed.toISOString().slice(0, 10) === date;
+  });
+  return valid ? Array.from(new Set(dates)).sort() : undefined;
+};
+
 const getConstructorMenu = async (req, res) => {
   try {
+    const dates = parseConstructorDates(req.query.dates);
+    if (dates === undefined) {
+      return res.status(400).json({
+        error: 'Bad request',
+        message: `dates — до ${MAX_CONSTRUCTOR_DATES} дат через запятую в формате ГГГГ-ММ-ДД`
+      });
+    }
+
+    // Меню по датам: какие блюда продаются в каждую дату
+    let city = null;
+    let availableByDate = null;
+    if (dates) {
+      const cityResult = await db.query(
+        `SELECT id, title FROM cities
+         ORDER BY (title = $1) DESC, sort ASC
+         LIMIT 1`,
+        [req.query.city || '']
+      );
+      city = cityResult.rows[0] || null;
+
+      const menuResult = city ? await db.query(
+        `SELECT day::DATE::TEXT AS date, m.dish_id
+         FROM unnest($1::DATE[]) AS day
+         CROSS JOIN LATERAL constructor_menu_on(day::DATE, $2) m
+         WHERE NOT m.removed`,
+        [dates, city.id]
+      ) : { rows: [] };
+
+      availableByDate = new Map(dates.map(date => [date, new Set()]));
+      menuResult.rows.forEach(row => availableByDate.get(row.date).add(row.dish_id));
+    }
+
+    const menuDishIds = availableByDate
+      ? Array.from(new Set([].concat(...Array.from(availableByDate.values(), set => Array.from(set)))))
+      : null;
+
     const result = await db.query(`
       WITH visible AS (
         SELECT id, title, image, price, price_old, weight
@@ -499,6 +557,7 @@ const getConstructorMenu = async (req, res) => {
         WHERE in_constructor
           AND price IS NOT NULL
           AND weight IS NOT NULL
+          AND ($1::INTEGER[] IS NULL OR id = ANY($1))
       ),
       dish_types AS (
         SELECT dmt.dish_id, array_agg(DISTINCT mt.slug) AS meal_types
@@ -527,7 +586,7 @@ const getConstructorMenu = async (req, res) => {
       JOIN dish_types dt ON dt.dish_id = v.id
       LEFT JOIN dish_nutrition dn ON dn.dish_id = v.id
       ORDER BY v.title
-    `);
+    `, [menuDishIds]);
 
     const dishes = result.rows.map(row => {
       const weight = parseInt(row.weight);
@@ -583,14 +642,26 @@ const getConstructorMenu = async (req, res) => {
     );
     const mealTypes = mealTypesResult.rows.filter(type => usedMealTypes.has(type.slug));
 
-    res.json({
+    const response = {
       mealTypes,
       dishes,
       meta: {
         totalDishes: dishes.length,
         generatedAt: new Date().toISOString()
       }
-    });
+    };
+
+    // В доступность попадают только блюда, которые можно продать (есть в dishes)
+    if (availableByDate) {
+      const sellable = new Set(dishes.map(dish => dish.id));
+      response.city = city ? city.title : null;
+      response.availability = {};
+      availableByDate.forEach((ids, date) => {
+        response.availability[date] = Array.from(ids).filter(id => sellable.has(id)).sort((a, b) => a - b);
+      });
+    }
+
+    res.json(response);
   } catch (error) {
     console.error('Ошибка при получении данных конструктора:', error);
     res.status(500).json({

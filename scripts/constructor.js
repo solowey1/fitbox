@@ -50,8 +50,12 @@
     dateFieldSelector: 'input[name="date"]',
     submitSelector: 'button[type="submit"], input[type="submit"], .t-submit',
 
+    // ▼ Сколько ближайших дней доставки показывать в блоке «Выберите день».
+    //   Дни без доставки (по правилам города) пропускаются, дни без меню видны, но неактивны.
+    daysToShow: 7,
+
     skuPrefix: 'D',
-    daysToShow: 7,       // сколько ближайших дней доставки показывать
+    menuCacheMinutes: 5, // как долго помнить меню по датам для проверки корзины (на сервере кэш тоже 5 минут)
     allLabel: 'Все',
     thumbnailWidth: 600, // ширина фото в карточке, px (карточка ~240 px, запас под ретину)
 
@@ -65,6 +69,10 @@
     texts: {
       unavailable: 'Конструктор меню пока работает только в Казани.',
       empty: 'Скоро здесь появятся блюда. Загляните чуть позже.',
+      noMenu: 'Меню на ближайшие дни ещё не составлено. Загляните чуть позже.',
+      dayNoMenu: 'Нет меню на этот день',
+      notInMenu: 'Этих блюд больше нет в меню на выбранный день: {dishes}. Уберите их из корзины.',
+      notInMenuInConstructor: 'Блюд больше нет в меню на свой день: {dishes} — уберите их из корзины.',
       error: 'Не удалось загрузить меню.',
       noDates: 'Не удалось загрузить даты доставки.',
       retry: 'Попробовать ещё раз',
@@ -176,6 +184,50 @@
       if (core.isDateAllowed(city, ts)) days.push(core.toISO(ts));
     }
     return days;
+  };
+
+  // ==================== МЕНЮ ПО ДАТАМ ====================
+
+  /**
+   * Какие блюда продаются в какую дату (цикл меню + исключения на дату — считает сервер).
+   * Нужно и конструктору, и проверке корзины на любой странице: блюдо могли убрать
+   * из меню на свой день уже после того, как его положили в корзину.
+   */
+  const menuByDate = {
+    entries: new Map(), // `${город}|${дата}` -> { ids: Set, at }
+    pending: new Set(),
+
+    key: (city, iso) => `${city}|${iso}`,
+
+    get(city, iso) {
+      const entry = this.entries.get(this.key(city, iso));
+      if (!entry || Date.now() - entry.at > CONFIG.menuCacheMinutes * 60000) return null;
+      return entry.ids;
+    },
+
+    remember(city, availability) {
+      Object.keys(availability || {}).forEach((iso) => {
+        this.entries.set(this.key(city, iso), { ids: new Set(availability[iso]), at: Date.now() });
+      });
+    },
+
+    /** Загрузить меню на даты, которых нет в памяти; после загрузки — callback */
+    ensure(apiBaseUrl, city, dates, callback) {
+      const missing = dates.filter(iso => !this.get(city, iso) && !this.pending.has(this.key(city, iso)));
+      if (!missing.length) return;
+
+      missing.forEach(iso => this.pending.add(this.key(city, iso)));
+      const query = `city=${encodeURIComponent(city)}&dates=${missing.join(',')}`;
+
+      fetch(`${apiBaseUrl}/tilda/constructor?${query}`, { headers: { Accept: 'application/json' } })
+        .then(response => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
+        .then((data) => {
+          this.remember(city, data.availability);
+          callback();
+        })
+        .catch(error => console.warn('[constructor] меню по датам не загрузилось', error))
+        .then(() => missing.forEach(iso => this.pending.delete(this.key(city, iso))));
+    }
   };
 
   // ==================== КОРЗИНА ТИЛЬДЫ ====================
@@ -430,6 +482,30 @@
    * Отправку блокируем своим классом и перехватом клика/submit — так не мешаем
    * календарю доставки, который управляет disabled у той же кнопки.
    */
+  const getApiBase = () => ((state.root && state.root.getAttribute('data-api')) || CONFIG.apiBaseUrl).replace(/\/$/, '');
+
+  /**
+   * Блюда корзины, которых нет в меню на их дату. Меню на нужные даты берётся из памяти,
+   * чего нет — догружается, после загрузки проверка повторяется (onLoaded).
+   * Пока меню не загружено, блюдо не считается проблемным: заказ не блокируем «на всякий случай».
+   */
+  const notInMenuItems = (items, city, staleDates, onLoaded) => {
+    const dated = items.filter(item => item.iso && staleDates.indexOf(item.iso) === -1);
+    if (!dated.length || !city) return [];
+
+    menuByDate.ensure(getApiBase(), city, Array.from(new Set(dated.map(item => item.iso))), onLoaded);
+
+    return dated.filter((item) => {
+      const ids = menuByDate.get(city, item.iso);
+      return ids && !ids.has(item.dishId);
+    });
+  };
+
+  /** «Борщ с говядиной (25 октября), Азу с гречкой (27 октября)» */
+  const describeItems = items => items
+    .map(item => `«${item.product.name}» (${formatDate(item.iso, { day: 'numeric', month: 'long' })})`)
+    .join(', ');
+
   const cartGuard = {
     setMessage(form, key, anchor, text) {
       let message = form.querySelector(`.fbc-cart-error[data-key="${key}"]`);
@@ -500,13 +576,18 @@
           this.setMessage(form, 'city', anchor.lastElementChild || anchor, wrongCity ? CONFIG.texts.cityLocked : '');
         }
 
+        // блюда, которых больше нет в меню на свой день (убрали из цикла или в стоп-лист)
+        const notInMenu = wrongCity ? [] : notInMenuItems(items, city, stale, () => this.check());
+
         if (submit) {
           const anchor = submit.closest('.t-form__submit') || submit;
           const text = stale.length ? CONFIG.texts.staleDates.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ')) : '';
           this.setMessage(form, 'dates', anchor.previousElementSibling || anchor, text);
+          this.setMessage(form, 'menu', anchor.previousElementSibling || anchor,
+            notInMenu.length ? CONFIG.texts.notInMenu.replace('{dishes}', describeItems(notInMenu)) : '');
         }
 
-        const locked = wrongCity || stale.length > 0;
+        const locked = wrongCity || stale.length > 0 || notInMenu.length > 0;
         form.querySelectorAll(CONFIG.submitSelector).forEach((button) => {
           button.classList.toggle('fbc-order-locked', locked);
         });
@@ -566,6 +647,7 @@
     root: null,
     city: null,
     days: [],           // ['2026-10-23', ...] — ближайшие дни доставки
+    availability: new Map(), // день -> Set(id блюд в меню этого дня)
     selectedDay: null,
     mealTypes: [],
     dishes: [],
@@ -581,8 +663,10 @@
 
   const apiUrl = () => (state.root.getAttribute('data-api') || CONFIG.apiBaseUrl).replace(/\/$/, '');
 
-  const loadData = async () => {
-    const response = await fetch(`${apiUrl()}/tilda/constructor`, { headers: { Accept: 'application/json' } });
+  /** Блюда и меню на дни доставки: availability — какие блюда продаются в каждый день */
+  const loadData = async (days) => {
+    const query = `city=${encodeURIComponent(state.city)}&dates=${days.join(',')}`;
+    const response = await fetch(`${apiUrl()}/tilda/constructor?${query}`, { headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.json();
   };
@@ -760,9 +844,22 @@
     const dialog = el('dialog', 'fbc-dialog');
     dialog.setAttribute('aria-label', dish.title);
 
-    const close = el('button', 'fbc-dialog-close', '×');
+    // крестик — SVG, а не символ «×»: у глифа своя посадка в шрифте, он стоит не по центру
+    // и при повороте на ховере заметно уезжает
+    const close = el('button', 'fbc-dialog-close');
     close.type = 'button';
     close.setAttribute('aria-label', 'Закрыть');
+    const svgNs = 'http://www.w3.org/2000/svg';
+    const cross = document.createElementNS(svgNs, 'svg');
+    // размеры и линии — атрибутами: крестик верный и со старыми стилями на странице
+    [['viewBox', '0 0 24 24'], ['width', '18'], ['height', '18'], ['aria-hidden', 'true'],
+      ['fill', 'none'], ['stroke', 'currentColor'], ['stroke-width', '2.2'], ['stroke-linecap', 'round']]
+      .forEach(([name, value]) => cross.setAttribute(name, value));
+    cross.style.display = 'block';
+    const crossPath = document.createElementNS(svgNs, 'path');
+    crossPath.setAttribute('d', 'M6 6l12 12M18 6L6 18');
+    cross.appendChild(crossPath);
+    close.appendChild(cross);
     close.addEventListener('click', closeDialog);
 
     const body = el('div', 'fbc-dialog-body');
@@ -855,20 +952,49 @@
       const count = counts.get(iso) || 0;
       if (count) chip.append(el('span', 'fbc-day-count', String(count)));
 
+      // день без меню виден (чтобы было понятно, что доставка в этот день есть), но неактивен
+      if (!dishesForDay(iso).length) {
+        chip.disabled = true;
+        chip.classList.add('is-empty');
+        chip.title = CONFIG.texts.dayNoMenu;
+        chip.setAttribute('aria-label', `${formatDayLong(iso)}: ${CONFIG.texts.dayNoMenu.toLowerCase()}`);
+      }
+
       chip.addEventListener('click', () => {
+        if (iso === state.selectedDay) return;
         state.selectedDay = iso;
-        renderDays();
-        syncWithCart();
+        renderMenu();
       });
       ui.dayList.append(chip);
     });
 
-    // блюда в корзине на дни, на которые доставка уже недоступна
+    // блюда в корзине на дни, на которые доставка уже недоступна,
+    // и блюда, которых больше нет в меню на свой день
     const stale = Array.from(counts.keys()).filter(iso => state.days.indexOf(iso) === -1).sort();
-    ui.daysNote.hidden = !stale.length;
-    ui.daysNote.textContent = stale.length
-      ? CONFIG.texts.staleInConstructor.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', '))
-      : '';
+    const notInMenu = notInMenuItems(cart.constructorItems(), state.city, stale, () => renderDays());
+    const notes = [];
+    if (stale.length) {
+      notes.push(CONFIG.texts.staleInConstructor.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ')));
+    }
+    if (notInMenu.length) {
+      notes.push(CONFIG.texts.notInMenuInConstructor.replace('{dishes}', describeItems(notInMenu)));
+    }
+    ui.daysNote.hidden = !notes.length;
+    ui.daysNote.textContent = notes.join(' ');
+  };
+
+  /** Блюда, которые продаются в выбранный день */
+  const dishesForDay = (iso) => {
+    const ids = state.availability.get(iso);
+    return ids ? state.dishes.filter(dish => ids.has(dish.id)) : [];
+  };
+
+  /** Меню выбранного дня: фильтр приёмов, разделы, счётчики */
+  const renderMenu = () => {
+    renderChips();
+    renderSections();
+    applyFilter();
+    syncWithCart();
   };
 
   // ---------- фильтр и разделы ----------
@@ -893,8 +1019,10 @@
       applyFilter();
     }));
 
+    const dishes = dishesForDay(state.selectedDay);
     state.mealTypes.forEach((type) => {
-      const count = state.dishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1).length;
+      const count = dishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1).length;
+      if (!count) return; // приёма нет в меню этого дня
       ui.chips.append(makeChip(type.title, count, state.selectedTypes.has(type.slug), () => {
         if (state.selectedTypes.has(type.slug)) state.selectedTypes.delete(type.slug);
         else state.selectedTypes.add(type.slug);
@@ -908,8 +1036,9 @@
     ui.sections.textContent = '';
     state.steppers.clear();
 
+    const dayDishes = dishesForDay(state.selectedDay);
     state.mealTypes.forEach((type) => {
-      const dishes = state.dishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1);
+      const dishes = dayDishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1);
       if (!dishes.length) return;
 
       const section = el('section', 'fbc-section');
@@ -1045,42 +1174,55 @@
     ui.chips.textContent = '';
     ui.days.hidden = true;
 
-    let data;
+    // сначала дни доставки (правила города), потом меню на эти дни
     let core;
     try {
-      [data, core] = await Promise.all([loadData(), loadDeliveryCore(apiUrl())]);
+      core = await loadDeliveryCore(apiUrl());
     } catch (error) {
       console.error('[constructor]', error);
-      showStatus(window.NCDM_DELIVERY ? CONFIG.texts.error : CONFIG.texts.noDates, true);
+      showStatus(CONFIG.texts.noDates, true);
+      return;
+    }
+
+    state.days = getDeliveryDays(core, state.city);
+    if (!state.days.length) {
+      ui.filters.hidden = true;
+      showStatus(CONFIG.texts.noDates, true);
+      return;
+    }
+
+    let data;
+    try {
+      data = await loadData(state.days);
+    } catch (error) {
+      console.error('[constructor]', error);
+      showStatus(CONFIG.texts.error, true);
       return;
     }
 
     state.mealTypes = data.mealTypes || [];
     state.dishes = data.dishes || [];
     state.dishesById = new Map(state.dishes.map(dish => [dish.id, dish]));
-    state.days = getDeliveryDays(core, state.city);
+    state.availability = new Map(Object.keys(data.availability || {}).map(iso => [iso, new Set(data.availability[iso])]));
+    menuByDate.remember(state.city, data.availability);
 
     // без блюд нечего фильтровать — пустые блоки «Выберите…» не показываем
     ui.filters.hidden = !state.dishes.length;
 
     if (!state.dishes.length) {
-      showStatus(CONFIG.texts.empty);
-      return;
-    }
-    if (!state.days.length) {
-      showStatus(CONFIG.texts.noDates, true);
+      showStatus(CONFIG.texts.noMenu);
       return;
     }
 
-    if (state.days.indexOf(state.selectedDay) === -1) state.selectedDay = state.days[0];
+    // выбранный день остаётся, если в нём есть меню; иначе — первый день с меню
+    if (!dishesForDay(state.selectedDay).length) {
+      state.selectedDay = state.days.find(iso => dishesForDay(iso).length);
+    }
 
     ui.status.hidden = true;
     ui.days.hidden = false;
-    renderChips();
-    renderSections();
-    applyFilter();
-    syncWithCart();
-    cartGuard.check(); // ядро дат могло загрузиться только сейчас
+    renderMenu();
+    cartGuard.check(); // ядро дат и меню могли загрузиться только сейчас
   }
 
   const initConstructor = () => {
@@ -1102,14 +1244,12 @@
     state.imageObserver = initImageObserver();
     start();
 
-    // наступление отсечки на открытой странице: ближайший день мог уйти
+    // наступление отсечки на открытой странице: ближайший день ушёл, добавился новый —
+    // загружаем меню заново (выбранный день сохранится, если он ещё доступен)
     setInterval(() => {
-      if (!window.NCDM_DELIVERY || !state.dishes.length) return;
+      if (!window.NCDM_DELIVERY || !state.days.length) return;
       const days = getDeliveryDays(window.NCDM_DELIVERY, state.city);
-      if (days.join() === state.days.join()) return;
-      state.days = days;
-      if (days.indexOf(state.selectedDay) === -1) state.selectedDay = days[0];
-      syncWithCart();
+      if (days.join() !== state.days.join()) start();
     }, 60000);
   };
 
@@ -1126,7 +1266,7 @@
     initConstructor();
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.1.0',
+      VERSION: 'fitbox-1.2.1',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
