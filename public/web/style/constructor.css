@@ -1,0 +1,776 @@
+/**
+ * Конструктор «Собери своё меню»
+ * Разметка: public/web/html/constructor.html, логика: scripts/constructor.js
+ * Палитра и кнопки — как в меню программ (style.css)
+ */
+
+/* Тильда обрезает #allrecords, из-за этого не работает липкая плашка внизу */
+#allrecords {
+  overflow: unset !important;
+}
+
+/* Переменные нужны и окну подробностей блюда: оно вставляется в body, вне .fbc */
+.fbc,
+.fbc-dialog {
+  --xs: 8px;
+  --s: 12px;
+  --m: 16px;
+  --l: 20px;
+  --xl: 24px;
+  --primary: #ff576a;
+  --light: #ffffff;
+  --dark: #121212;
+  --dark-1: #2b2b2b;
+  --grey: #e6e6e6;
+  --grey-1: #a1a1a1;
+  --grey-2: #f5f5f5;
+}
+
+.fbc {
+  position: relative;
+  width: 100%;
+  color: var(--light);
+  background-color: var(--dark);
+  font-family: "Inter", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.fbc *,
+.fbc *::before,
+.fbc *::after,
+.fbc-dialog * {
+  box-sizing: border-box;
+}
+
+.fbc [hidden],
+.fbc-dialog [hidden] {
+  display: none !important;
+}
+
+.fbc-wrapper {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: calc(var(--l) * 3) 55px calc(var(--l) * 2) 45px;
+}
+
+/* ─── Заголовок ─────────────────────────────────────────────────────────── */
+
+.fbc-head {
+  margin-bottom: calc(var(--xl) * 2);
+}
+
+.fbc-title {
+  margin: 0 0 var(--s);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--light);
+}
+
+.fbc-subtitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--grey-1);
+}
+
+/* ─── Фильтр «Выберите приемы» ──────────────────────────────────────────── */
+
+.fbc-filters {
+  margin-bottom: calc(var(--xl) * 2);
+}
+
+.fbc-choose {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--l) * 2);
+  margin-bottom: var(--xl);
+}
+
+.fbc-choose span {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--grey);
+}
+
+.fbc-choose-line {
+  width: 100%;
+  height: 1px;
+  background-color: var(--grey);
+}
+
+.fbc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s);
+}
+
+.fbc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xs);
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 17px;
+  white-space: nowrap;
+  color: var(--light);
+  background: transparent;
+  border: 1px solid var(--light);
+  border-radius: 40px;
+  cursor: pointer;
+  transition: all .2s ease-in-out;
+}
+
+.fbc-chip:hover {
+  color: var(--light);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.fbc-chip.is-active {
+  color: var(--dark);
+  background: var(--light);
+  border-color: var(--light);
+}
+
+.fbc-chip-count {
+  font-size: 12px;
+  opacity: .6;
+}
+
+.fbc-chip:focus-visible,
+.fbc-btn:focus-visible,
+.fbc-card-open:focus-visible,
+.fbc-stepper-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ─── Загрузка, ошибки, пусто ───────────────────────────────────────────── */
+
+.fbc-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--m);
+  padding: calc(var(--xl) * 3) 0;
+  text-align: center;
+}
+
+.fbc-status-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--grey);
+}
+
+.fbc-loader {
+  width: 32px;
+  height: 32px;
+  border: 4px solid var(--dark-1);
+  border-bottom-color: var(--primary);
+  border-radius: 50%;
+  display: inline-block;
+  animation: fbc-rotation 1s linear infinite;
+}
+
+@keyframes fbc-rotation {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ─── Разделы ───────────────────────────────────────────────────────────── */
+
+.fbc-section {
+  margin-bottom: calc(var(--xl) * 2);
+}
+
+.fbc-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s);
+  margin-bottom: var(--l);
+}
+
+.fbc-section-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--light);
+}
+
+.fbc-section-count {
+  font-size: 14px;
+  color: var(--grey-1);
+}
+
+.fbc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--xl);
+}
+
+/* ─── Карточка блюда ────────────────────────────────────────────────────── */
+
+.fbc-card {
+  display: flex;
+  flex-direction: column;
+  padding: var(--m);
+  color: var(--dark);
+  background-color: var(--light);
+  border-radius: var(--xl);
+  outline: 1px solid transparent;
+  outline-offset: 0;
+  transition: outline-color .2s ease, outline-offset .2s ease;
+}
+
+.fbc-card:hover {
+  outline-color: var(--primary);
+  outline-offset: 3px;
+}
+
+.fbc-card-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.fbc-card-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1.4;
+  margin-bottom: var(--m);
+  border-radius: var(--l);
+  background-color: var(--grey-2);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.fbc-card-image[data-src] {
+  background-image: linear-gradient(90deg, #f0f0f0 0%, #f8f8f8 50%, #f0f0f0 100%);
+  background-size: 200% 100%;
+  animation: fbc-loading 1.5s ease-in-out infinite;
+}
+
+.fbc-card-image.is-loaded {
+  background-color: var(--light);
+  animation: none;
+}
+
+@keyframes fbc-loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.fbc-card-title {
+  display: block;
+  margin-bottom: var(--s);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.fbc-card-meta {
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--grey-1);
+}
+
+.fbc-card-nutrition {
+  margin-bottom: var(--m);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dark-1);
+}
+
+.fbc-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s);
+  margin-top: auto;
+}
+
+/* ─── Цена ──────────────────────────────────────────────────────────────── */
+
+.fbc-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--xs);
+}
+
+.fbc-price-current {
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fbc-price-old {
+  font-size: 14px;
+  color: var(--grey-1);
+  text-decoration: line-through;
+  white-space: nowrap;
+}
+
+/* ─── Кнопки и счётчик ──────────────────────────────────────────────────── */
+
+.fbc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--light);
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 40px;
+  cursor: pointer;
+  transition: all .2s ease-in-out;
+}
+
+.fbc-btn:hover {
+  color: var(--primary);
+  background: transparent;
+}
+
+.fbc-btn-outline {
+  color: var(--light);
+  background: transparent;
+  border-color: var(--light);
+}
+
+.fbc-btn-outline:hover {
+  color: var(--dark);
+  background: var(--light);
+}
+
+.fbc-stepper-controls {
+  display: none;
+  align-items: center;
+  gap: var(--xs);
+  padding: 4px;
+  background: var(--grey-2);
+  border-radius: 40px;
+}
+
+.fbc-stepper.is-active .fbc-btn-add {
+  display: none;
+}
+
+.fbc-stepper.is-active .fbc-stepper-controls {
+  display: inline-flex;
+}
+
+.fbc-stepper-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--dark);
+  background: var(--light);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+.fbc-stepper-btn:hover {
+  color: var(--light);
+  background: var(--primary);
+}
+
+.fbc-stepper-count {
+  min-width: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ─── Итоговая плашка ───────────────────────────────────────────────────── */
+
+.fbc-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  padding: var(--s) 55px var(--s) 45px;
+  background: rgba(18, 18, 18, .92);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--dark-1);
+}
+
+.fbc-bar-inner {
+  max-width: 1340px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--l);
+}
+
+.fbc-bar-summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.fbc-bar-count {
+  color: var(--grey);
+  font-weight: 500;
+}
+
+.fbc-bar-nutrition {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--grey-1);
+}
+
+.fbc-bar-button {
+  padding: var(--m) calc(var(--m) * 2);
+  font-size: 16px;
+}
+
+/* ─── Подробности блюда ─────────────────────────────────────────────────── */
+
+.fbc-dialog {
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  padding: 0;
+  color: #121212;
+  background: #ffffff;
+  border: none;
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .3);
+  font-family: "Inter", sans-serif;
+  overflow: hidden;
+}
+
+.fbc-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: fbc-dialog-in .3s ease;
+}
+
+.fbc-dialog::backdrop {
+  background: rgba(0, 0, 0, .7);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes fbc-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fbc-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: #121212;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform .3s ease, background-color .3s ease;
+}
+
+.fbc-dialog-close:hover {
+  background: #e0e0e0;
+  transform: rotate(90deg);
+}
+
+.fbc-dialog-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.fbc-dialog-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 20px;
+  border-radius: 16px;
+}
+
+.fbc-dialog-title {
+  margin: 0 0 6px;
+  padding-right: 40px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.fbc-dialog-meta {
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #a1a1a1;
+}
+
+.fbc-dialog-section {
+  margin-bottom: 20px;
+}
+
+.fbc-dialog-subtitle {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fbc-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.fbc-dialog-grid-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 10px;
+}
+
+.fbc-dialog-grid-label {
+  font-size: 12px;
+  color: #666666;
+}
+
+.fbc-dialog-grid-value {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fbc-dialog-ingredients {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #555555;
+}
+
+.fbc-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e6e6e6;
+}
+
+.fbc-dialog .fbc-btn,
+.fbc-dialog .fbc-chip,
+.fbc-dialog .fbc-stepper-btn {
+  font-family: "Inter", sans-serif;
+}
+
+/* Кнопки и счётчик внутри диалога — те же, что в карточке (диалог вне .fbc) */
+.fbc-dialog .fbc-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.fbc-dialog .fbc-price-current {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* ─── Корзина: блюда конструктора не в том городе ───────────────────────── */
+
+.fbc-city-error {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e5383b;
+}
+
+.fbc-submit-locked {
+  opacity: .45 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
+/* ─── Адаптив ───────────────────────────────────────────────────────────── */
+
+@media screen and (max-width: 1200px) {
+  .fbc-wrapper {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  .fbc-bar {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  .fbc-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: var(--l);
+  }
+}
+
+@media screen and (max-width: 640px) {
+  .fbc-wrapper {
+    padding: calc(var(--l) * 2) var(--m) var(--l);
+  }
+
+  .fbc-title {
+    font-size: 28px;
+  }
+
+  .fbc-subtitle {
+    font-size: 14px;
+  }
+
+  .fbc-head,
+  .fbc-filters {
+    margin-bottom: calc(var(--l) * 1.5);
+  }
+
+  /* фильтры — в одну строку с прокруткой */
+  .fbc-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin: 0 calc(var(--m) * -1);
+    padding: 0 var(--m) 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .fbc-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fbc-chip {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .fbc-section-title {
+    font-size: 20px;
+  }
+
+  .fbc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s);
+  }
+
+  .fbc-card {
+    padding: var(--s);
+    border-radius: var(--l);
+  }
+
+  .fbc-card:hover {
+    outline-color: transparent;
+  }
+
+  .fbc-card-image {
+    margin-bottom: var(--s);
+    border-radius: var(--m);
+  }
+
+  .fbc-card-title {
+    font-size: 14px;
+  }
+
+  .fbc-card-nutrition {
+    font-size: 11px;
+  }
+
+  .fbc-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--xs);
+  }
+
+  .fbc-price-current {
+    font-size: 16px;
+  }
+
+  .fbc-card .fbc-btn-add {
+    width: 100%;
+    padding: 10px 12px;
+  }
+
+  .fbc-card .fbc-stepper-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .fbc-stepper-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .fbc-bar {
+    padding: var(--s) var(--m);
+  }
+
+  .fbc-bar-summary {
+    font-size: 16px;
+  }
+
+  .fbc-bar-nutrition {
+    font-size: 11px;
+  }
+
+  .fbc-bar-button {
+    padding: 14px 20px;
+    font-size: 15px;
+  }
+
+  .fbc-dialog-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
