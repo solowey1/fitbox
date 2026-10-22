@@ -71,15 +71,14 @@
       empty: 'Скоро здесь появятся блюда. Загляните чуть позже.',
       noMenu: 'Меню на ближайшие дни ещё не составлено. Загляните чуть позже.',
       dayNoMenu: 'Нет меню на этот день',
-      notInMenu: 'Этих блюд больше нет в меню на выбранный день: {dishes}. Уберите их из корзины.',
-      notInMenuInConstructor: 'Блюд больше нет в меню на свой день: {dishes} — уберите их из корзины.',
       error: 'Не удалось загрузить меню.',
       noDates: 'Не удалось загрузить даты доставки.',
       retry: 'Попробовать ещё раз',
       daysTitle: 'Выберите день',
       cityLocked: 'Блюда из конструктора пока доставляем только в Казань. Выберите Казань или уберите эти блюда из корзины.',
-      staleDates: 'Доставка уже недоступна на {dates}. Уберите блюда на эти дни из корзины и выберите их на другой день.',
-      staleInConstructor: 'В корзине есть блюда на {dates} — доставка на эти дни уже недоступна.',
+      // блюда в корзине на дни, на которые доставка уже недоступна, или которых больше нет в меню на свой день
+      unavailableDays: 'Больше нельзя выбрать блюда на следующие дни: {dates}.',
+      unavailableRemove: 'Уберите следующие блюда из корзины:',
       add: 'Добавить',
       dayEmpty: 'пока пусто',
       noNutrition: 'КБЖУ уточняется'
@@ -501,23 +500,53 @@
     });
   };
 
-  /** «Борщ с говядиной (25 октября), Азу с гречкой (27 октября)» */
-  const describeItems = items => items
-    .map(item => `«${item.product.name}» (${formatDate(item.iso, { day: 'numeric', month: 'long' })})`)
-    .join(', ');
+  /**
+   * Что из корзины уже нельзя заказать: блюда на дни, на которые доставка недоступна,
+   * и блюда, которых больше нет в меню на свой день. null — всё в порядке.
+   */
+  const unavailableSummary = (items, staleDates, notInMenu) => {
+    const unavailable = items
+      .filter(item => item.iso && staleDates.indexOf(item.iso) !== -1)
+      .concat(notInMenu)
+      .sort((a, b) => a.iso.localeCompare(b.iso));
+    if (!unavailable.length) return null;
+
+    const unique = list => list.filter((value, index) => list.indexOf(value) === index);
+    return {
+      dates: unique(unavailable.map(item => item.iso)),
+      dishes: unique(unavailable.map(item => item.product.name))
+    };
+  };
+
+  /** «Больше нельзя выбрать блюда на следующие дни: …» + список блюд, которые нужно убрать */
+  const fillUnavailable = (container, summary) => {
+    const dates = summary.dates.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ');
+    const list = el('ul', 'fbc-unavailable-list');
+    summary.dishes.forEach(name => list.append(el('li', null, name)));
+
+    container.textContent = '';
+    container.append(
+      el('p', 'fbc-unavailable-days', CONFIG.texts.unavailableDays.replace('{dates}', dates)),
+      el('p', 'fbc-unavailable-remove', CONFIG.texts.unavailableRemove),
+      list
+    );
+  };
 
   const cartGuard = {
-    setMessage(form, key, anchor, text) {
+    /** content: текст, функция заполнения элемента или пусто — убрать сообщение */
+    setMessage(form, key, anchor, content) {
       let message = form.querySelector(`.fbc-cart-error[data-key="${key}"]`);
-      if (text && !message) {
-        message = el('div', 'fbc-cart-error t-text', text);
+      if (!content) {
+        if (message) message.remove();
+        return;
+      }
+      if (!message) {
+        message = el('div', 'fbc-cart-error t-text');
         message.setAttribute('data-key', key);
         anchor.parentNode.insertBefore(message, anchor.nextSibling);
-      } else if (text) {
-        message.textContent = text;
-      } else if (message) {
-        message.remove();
       }
+      if (typeof content === 'function') content(message);
+      else message.textContent = content;
     },
 
     syncDateField(form, items) {
@@ -581,10 +610,9 @@
 
         if (submit) {
           const anchor = submit.closest('.t-form__submit') || submit;
-          const text = stale.length ? CONFIG.texts.staleDates.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ')) : '';
-          this.setMessage(form, 'dates', anchor.previousElementSibling || anchor, text);
-          this.setMessage(form, 'menu', anchor.previousElementSibling || anchor,
-            notInMenu.length ? CONFIG.texts.notInMenu.replace('{dishes}', describeItems(notInMenu)) : '');
+          const summary = unavailableSummary(items, stale, notInMenu);
+          this.setMessage(form, 'unavailable', anchor.previousElementSibling || anchor,
+            summary ? node => fillUnavailable(node, summary) : '');
         }
 
         const locked = wrongCity || stale.length > 0 || notInMenu.length > 0;
@@ -603,6 +631,11 @@
       style.id = 'fbc-guard-styles';
       style.textContent = [
         '.fbc-cart-error{margin:8px 0;font-size:13px;line-height:1.4;color:#e5383b;}',
+        // предупреждение о недоступных блюдах — в корзине и в конструкторе
+        '.fbc-cart-error p,.fbc-days-note p{margin:0;}',
+        '.fbc-unavailable-remove{margin-top:6px !important;}',
+        '.fbc-unavailable-list{margin:4px 0 0;padding-left:20px;list-style:disc;}',
+        '.fbc-unavailable-list li{margin:2px 0;}',
         '.t706 form .t-input-group.fbc-hidden-field{display:none !important;}',
         '.fbc-order-locked{opacity:.45 !important;pointer-events:none !important;cursor:not-allowed !important;}'
       ].join('');
@@ -922,7 +955,7 @@
     const list = el('div', 'fbc-day-list');
     list.setAttribute('role', 'group');
     list.setAttribute('aria-label', CONFIG.texts.daysTitle);
-    block.append(choose, list, el('p', 'fbc-days-note'));
+    block.append(choose, list, el('div', 'fbc-days-note'));
 
     ui.filters.parentNode.insertBefore(block, ui.filters);
     return block;
@@ -970,17 +1003,13 @@
 
     // блюда в корзине на дни, на которые доставка уже недоступна,
     // и блюда, которых больше нет в меню на свой день
+    const items = cart.constructorItems();
     const stale = Array.from(counts.keys()).filter(iso => state.days.indexOf(iso) === -1).sort();
-    const notInMenu = notInMenuItems(cart.constructorItems(), state.city, stale, () => renderDays());
-    const notes = [];
-    if (stale.length) {
-      notes.push(CONFIG.texts.staleInConstructor.replace('{dates}', stale.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ')));
-    }
-    if (notInMenu.length) {
-      notes.push(CONFIG.texts.notInMenuInConstructor.replace('{dishes}', describeItems(notInMenu)));
-    }
-    ui.daysNote.hidden = !notes.length;
-    ui.daysNote.textContent = notes.join(' ');
+    const notInMenu = notInMenuItems(items, state.city, stale, () => renderDays());
+    const summary = unavailableSummary(items, stale, notInMenu);
+    ui.daysNote.hidden = !summary;
+    if (summary) fillUnavailable(ui.daysNote, summary);
+    else ui.daysNote.textContent = '';
   };
 
   /** Блюда, которые продаются в выбранный день */
@@ -1266,7 +1295,7 @@
     initConstructor();
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.2.1',
+      VERSION: 'fitbox-1.2.2',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
