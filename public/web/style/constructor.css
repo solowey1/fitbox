@@ -24,13 +24,16 @@
   --grey: #e6e6e6;
   --grey-1: #a1a1a1;
   --grey-2: #f5f5f5;
+  --grey-3: #717171;
+  --surface: #f2f2f2; /* карточки, фильтры, итоговая плашка — как в меню программ */
+  --green: #3eb352;   /* выбранный фильтр, «Добавить», «Оформить» */
 }
 
 .fbc {
   position: relative;
   width: 100%;
-  color: var(--light);
-  background-color: var(--dark);
+  color: var(--dark);
+  background-color: var(--light);
   font-family: "Inter", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
@@ -66,14 +69,14 @@
   font-size: 40px;
   font-weight: 600;
   line-height: 1.15;
-  color: var(--light);
+  color: var(--dark);
 }
 
 .fbc-subtitle {
   margin: 0;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 /* ─── Фильтр «Выберите приемы» ──────────────────────────────────────────── */
@@ -95,7 +98,7 @@
   line-height: 15px;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--grey);
+  color: var(--dark);
 }
 
 .fbc-choose-line {
@@ -120,24 +123,22 @@
   font-weight: 500;
   line-height: 17px;
   white-space: nowrap;
-  color: var(--light);
-  background: transparent;
-  border: 1px solid var(--light);
+  color: var(--dark);
+  background: var(--surface);
+  border: 1px solid var(--surface);
   border-radius: 40px;
   cursor: pointer;
   transition: all .2s ease-in-out;
 }
 
 .fbc-chip:hover {
-  color: var(--light);
-  background: var(--primary);
-  border-color: var(--primary);
+  border-color: var(--green);
 }
 
 .fbc-chip.is-active {
-  color: var(--dark);
-  background: var(--light);
-  border-color: var(--light);
+  color: var(--light);
+  background: var(--green);
+  border-color: var(--green);
 }
 
 .fbc-chip-count {
@@ -168,13 +169,13 @@
   margin: 0;
   font-size: 16px;
   line-height: 1.5;
-  color: var(--grey);
+  color: var(--grey-3);
 }
 
 .fbc-loader {
   width: 32px;
   height: 32px;
-  border: 4px solid var(--dark-1);
+  border: 4px solid var(--grey);
   border-bottom-color: var(--primary);
   border-radius: 50%;
   display: inline-block;
@@ -205,12 +206,12 @@
   font-size: 24px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--light);
+  color: var(--dark);
 }
 
 .fbc-section-count {
   font-size: 14px;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 .fbc-grid {
@@ -226,7 +227,7 @@
   flex-direction: column;
   padding: var(--m);
   color: var(--dark);
-  background-color: var(--light);
+  background-color: var(--surface);
   border-radius: var(--xl);
   outline: 1px solid transparent;
   outline-offset: 0;
@@ -269,7 +270,7 @@
 }
 
 .fbc-card-image.is-loaded {
-  background-color: var(--light);
+  background-color: transparent;
   animation: none;
 }
 
@@ -294,7 +295,7 @@
 .fbc-card-meta {
   margin-bottom: 4px;
   font-size: 12px;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 .fbc-card-nutrition {
@@ -348,27 +349,27 @@
   line-height: 1;
   white-space: nowrap;
   color: var(--light);
-  background: var(--primary);
-  border: 1px solid var(--primary);
+  background: var(--green);
+  border: 1px solid var(--green);
   border-radius: 40px;
   cursor: pointer;
   transition: all .2s ease-in-out;
 }
 
 .fbc-btn:hover {
-  color: var(--primary);
+  color: var(--green);
   background: transparent;
 }
 
 .fbc-btn-outline {
-  color: var(--light);
+  color: var(--dark);
   background: transparent;
-  border-color: var(--light);
+  border-color: var(--dark);
 }
 
 .fbc-btn-outline:hover {
-  color: var(--dark);
-  background: var(--light);
+  color: var(--light);
+  background: var(--dark);
 }
 
 .fbc-stepper-controls {
@@ -376,7 +377,7 @@
   align-items: center;
   gap: var(--xs);
   padding: 4px;
-  background: var(--grey-2);
+  background: var(--light);
   border-radius: 40px;
 }
 
@@ -399,7 +400,7 @@
   font-size: 20px;
   line-height: 1;
   color: var(--dark);
-  background: var(--light);
+  background: var(--surface);
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -408,7 +409,7 @@
 
 .fbc-stepper-btn:hover {
   color: var(--light);
-  background: var(--primary);
+  background: var(--green);
 }
 
 .fbc-stepper-count {
@@ -425,10 +426,11 @@
   bottom: 0;
   z-index: 50;
   padding: var(--s) 55px var(--s) 45px;
-  background: rgba(18, 18, 18, .92);
+  color: var(--dark);
+  background: rgba(242, 242, 242, .95);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  border-top: 1px solid var(--dark-1);
+  box-shadow: 0 -4px 20px rgba(18, 18, 18, .08);
 }
 
 .fbc-bar-inner {
@@ -449,14 +451,14 @@
 }
 
 .fbc-bar-count {
-  color: var(--grey);
+  color: var(--dark-1);
   font-weight: 500;
 }
 
 .fbc-bar-nutrition {
   margin-top: 4px;
   font-size: 12px;
-  color: var(--grey-1);
+  color: var(--grey-3);
 }
 
 .fbc-bar-button {
