@@ -81,6 +81,7 @@
       // блюда в корзине на дни, на которые доставка уже недоступна, или которых больше нет в меню на свой день
       unavailableDays: 'Больше нельзя выбрать блюда на следующие дни: {dates}.',
       unavailableRemove: 'Уберите следующие блюда из корзины:',
+      unavailableRemoveButton: 'Убрать из корзины',
       // в корзине Тильды
       cartWarning: 'Часть блюд больше нельзя заказать на выбранные дни. Удалите их, чтобы оформить заказ.',
       cartRowUnavailable: 'Недоступно на этот день',
@@ -605,21 +606,35 @@
     const unique = list => list.filter((value, index) => list.indexOf(value) === index);
     return {
       dates: unique(unavailable.map(item => item.iso)),
-      dishes: unique(unavailable.map(item => item.product.name))
+      dishes: unique(unavailable.map(item => item.product.name)),
+      skus: unique(unavailable.map(item => String(item.product.sku)))
     };
   };
 
-  /** «Больше нельзя выбрать блюда на следующие дни: …» + список блюд, которые нужно убрать */
+  /**
+   * «Больше нельзя выбрать блюда на следующие дни: …» + список блюд
+   * и кнопка «Убрать из корзины» — удаляет все перечисленные блюда одним кликом
+   */
   const fillUnavailable = (container, summary) => {
     const dates = summary.dates.map(iso => formatDate(iso, { day: 'numeric', month: 'long' })).join(', ');
     const list = el('ul', 'fbc-unavailable-list');
     summary.dishes.forEach(name => list.append(el('li', null, name)));
 
+    // type="button": внутри формы корзины кнопка по умолчанию отправила бы заказ
+    const removeButton = el('button', 'fbc-unavailable-button', CONFIG.texts.unavailableRemoveButton);
+    removeButton.type = 'button';
+    removeButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      cart.remove(summary.skus);
+    });
+
     container.textContent = '';
     container.append(
       el('p', 'fbc-unavailable-days', CONFIG.texts.unavailableDays.replace('{dates}', dates)),
       el('p', 'fbc-unavailable-remove', CONFIG.texts.unavailableRemove),
-      list
+      list,
+      removeButton
     );
   };
 
@@ -745,6 +760,10 @@
         '.fbc-unavailable-remove{margin-top:6px !important;}',
         '.fbc-unavailable-list{margin:4px 0 0;padding-left:20px;list-style:disc;}',
         '.fbc-unavailable-list li{margin:2px 0;}',
+        '.fbc-unavailable-button{margin-top:10px;padding:8px 16px;font:inherit;font-size:13px;font-weight:500;',
+        'line-height:1.2;color:#fff;background:#e5383b;border:1px solid #e5383b;border-radius:20px;',
+        'cursor:pointer;transition:background-color .2s ease,color .2s ease;}',
+        '.fbc-unavailable-button:hover{color:#e5383b;background:transparent;}',
         '.t706 form .t-input-group.fbc-hidden-field{display:none !important;}',
         '.fbc-order-locked{opacity:.45 !important;pointer-events:none !important;cursor:not-allowed !important;}'
       ].join('');
@@ -1419,7 +1438,7 @@
     initConstructor();
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.3.0',
+      VERSION: 'fitbox-1.3.1',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
