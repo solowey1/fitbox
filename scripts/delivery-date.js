@@ -37,7 +37,7 @@
     // Ключ — значение поля «Город» в корзине (select[name="city"])
     cities: {
       'Ульяновск': { utcOffset: 4 },
-      'Казань': { utcOffset: 3 },
+      'Казань': { utcOffset: 3, closedWeekdays: [1, 3, 6] }, // не возим в пн, ср, сб
       'Самара': { utcOffset: 4 },
       'Тольятти': { utcOffset: 4 },
       'Димитровград': { utcOffset: 4 }
