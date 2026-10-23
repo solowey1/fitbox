@@ -655,38 +655,46 @@
       else message.textContent = content;
     },
 
+    /**
+     * Поле «Дата доставки» остаётся видимым. Если в корзине только блюда конструктора,
+     * подставляем самую раннюю дату блюд, но не перебиваем дату, которую покупатель выбрал сам:
+     * свою подстановку помним в data-fbc-auto-date и меняем только её.
+     */
     syncDateField(form, items) {
       const input = form.querySelector(CONFIG.dateFieldSelector);
       if (!input) return;
-      const group = input.closest('.t-input-group') || input.parentNode;
 
       const onlyConstructor = items.length > 0 && !cart.hasOtherProducts();
       const dates = items.map(item => item.iso).filter(Boolean).sort();
+      const auto = input.getAttribute('data-fbc-auto-date');
+      const value = input.value.trim();
 
       // Календарь доставки (Litepicker) при пересчёте переписывает поле своей выбранной датой,
       // поэтому дату ставим через него, а без календаря — прямо в поле
       const picker = input._ncdmPicker;
 
-      // скрываем классом с !important: на сайте у поля бывает своё display: block !important
       if (onlyConstructor && dates.length) {
-        group.classList.add('fbc-hidden-field');
+        const earliest = formatDayField(dates[0]);
+        if (value && value !== auto) return;
 
-        const [year, month, day] = dates[0].split('-').map(Number);
-        if (picker) {
-          const current = picker.getDate();
-          const date = current && (current.toJSDate ? current.toJSDate() : current);
-          const same = date && date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-          if (!same) picker.setDate(new Date(year, month - 1, day));
-        } else {
-          input.value = formatDayField(dates[0]);
+        if (value !== earliest) {
+          const [year, month, day] = dates[0].split('-').map(Number);
+          if (picker) picker.setDate(new Date(year, month - 1, day));
+          else input.value = earliest;
         }
-      } else if (group.classList.contains('fbc-hidden-field')) {
-        group.classList.remove('fbc-hidden-field');
-        if (picker) picker.clearSelection();
-        input.value = '';
+        input.setAttribute('data-fbc-auto-date', earliest);
+      } else if (auto) {
+        // блюд конструктора не осталось — убираем свою подстановку, если её не меняли
+        if (value === auto) {
+          if (picker) picker.clearSelection();
+          input.value = '';
+        }
+        input.removeAttribute('data-fbc-auto-date');
+      } else {
+        return;
       }
 
-      // календарь доставки пересчитает блокировку кнопки с учётом скрытого поля
+      // календарь доставки пересчитает подсказку и блокировку кнопки
       if (window.NCDM_DELIVERY_PICKER) window.NCDM_DELIVERY_PICKER.scan();
     },
 
@@ -764,7 +772,6 @@
         'line-height:1.2;color:#fff;background:#e5383b;border:1px solid #e5383b;border-radius:20px;',
         'cursor:pointer;transition:background-color .2s ease,color .2s ease;}',
         '.fbc-unavailable-button:hover{color:#e5383b;background:transparent;}',
-        '.t706 form .t-input-group.fbc-hidden-field{display:none !important;}',
         '.fbc-order-locked{opacity:.45 !important;pointer-events:none !important;cursor:not-allowed !important;}'
       ].join('');
       document.head.appendChild(style);
@@ -1438,7 +1445,7 @@
     initConstructor();
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.3.1',
+      VERSION: 'fitbox-1.3.2',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
