@@ -6,6 +6,11 @@
  *
  * В форме корзины нужно поле «Input» с именем переменной date.
  * Дата уходит в заказ как ДД.ММ.ГГГГ и сохраняется в orders.delivery_date.
+ *
+ * Скрипт подключён на всех страницах с корзиной, поэтому здесь же правило корзины:
+ * блюда «Собери своё меню» (артикул D<id>-<ГГГГММДД>) оформляются только на странице
+ * конструктора. На других страницах заказ с ними блокируется — с предупреждением,
+ * ссылкой на конструктор и кнопкой «Убрать из корзины».
  */
 (function () {
   'use strict';
@@ -38,7 +43,23 @@
     placeholderReady: 'Выберите дату доставки',
 
     accent: '#111111',
-    zIndex: 100000000
+    zIndex: 100000000,
+
+    // блюда конструктора — только на странице конструктора
+    constructorOnly: {
+      page: '#constructor.fbc',            // разметка конструктора: на этой странице правило не действует
+      url: '/constructor',
+      sku: /^D\d+(?:-\d{8})?$/i,
+      cartList: '.t706__cartwin-products, .t706__sidebar-products, .t706__cartpage-products',
+      cartForm: '.t706 form',
+      cartContinue: '.t706__sidebar-continue, .t706__cartpage-open-form',
+      texts: {
+        warning: 'Блюда из «Собери своё меню» оформляются только на странице конструктора. ' +
+          'Перейдите в конструктор или уберите их из корзины.',
+        go: 'Перейти в конструктор',
+        remove: 'Убрать из корзины'
+      }
+    }
   };
 
   var DAY = 86400000;
@@ -81,7 +102,19 @@
       '.ncdm-dp-input{cursor:pointer;}',
       '.ncdm-dp-input:disabled,.ncdm-dp-input[disabled]{cursor:not-allowed;}',
       '.ncdm-submit-locked{opacity:.45 !important;pointer-events:none !important;',
-        'cursor:not-allowed !important;transition:opacity .2s ease;}'
+        'cursor:not-allowed !important;transition:opacity .2s ease;}',
+      '.ncdm-cart-guard{margin:0 0 16px;padding:10px 14px;font-size:13px;line-height:1.4;',
+        'color:#b3261e;background:#fdecea;border-radius:10px;}',
+      '.t706 form .ncdm-cart-guard{margin:8px 0;}',
+      '.ncdm-cart-guard p{margin:0;}',
+      '.ncdm-cart-guard-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}',
+      '.ncdm-cart-guard-button{display:inline-block;padding:8px 16px;font:inherit;font-size:13px;',
+        'font-weight:500;line-height:1.2;text-decoration:none;border:1px solid #e5383b;border-radius:20px;',
+        'cursor:pointer;transition:background-color .2s ease,color .2s ease;}',
+      '.ncdm-cart-guard-go{color:#fff !important;background:#e5383b;}',
+      '.ncdm-cart-guard-go:hover{color:#e5383b !important;background:transparent;}',
+      '.ncdm-cart-guard-remove{color:#e5383b;background:transparent;}',
+      '.ncdm-cart-guard-remove:hover{color:#fff;background:#e5383b;}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -182,7 +215,7 @@
     var form = getForm(input);
     if (form === document) return;
 
-    var valid = isDateValid(input);
+    var valid = isDateValid(input) && !guard.isBlocked();
 
     Array.prototype.forEach.call(form.querySelectorAll(CONFIG.submit), function (btn) {
       btn.classList.toggle('ncdm-submit-locked', !valid);
@@ -201,11 +234,159 @@
 
   document.addEventListener('submit', function (e) {
     var input = e.target.querySelector && e.target.querySelector(CONFIG.dateInput);
-    if (input && !isDateValid(input)) {
+    var blocked = guard.isBlocked() && e.target.matches && e.target.matches(CONFIG.constructorOnly.cartForm);
+    if (blocked || (input && !isDateValid(input))) {
       e.preventDefault();
       e.stopPropagation();
     }
   }, true);
+
+  // ==================== БЛЮДА КОНСТРУКТОРА — ТОЛЬКО В КОНСТРУКТОРЕ ====================
+
+  var guard = (function () {
+    var RULE = CONFIG.constructorOnly;
+
+    function products() {
+      return (window.tcart && Array.isArray(window.tcart.products)) ? window.tcart.products : [];
+    }
+
+    /** Удалённый товар Тильда 4 секунды держит с deleted: 'yes' — он уже не в корзине */
+    function isInCart(product) {
+      return !!product && product.deleted !== 'yes' && (parseInt(product.quantity, 10) || 0) > 0;
+    }
+
+    function constructorSkus() {
+      var skus = [];
+      products().forEach(function (product) {
+        if (isInCart(product) && RULE.sku.test(String(product.sku))) skus.push(String(product.sku));
+      });
+      return skus;
+    }
+
+    function isConstructorPage() {
+      return !!document.querySelector(RULE.page);
+    }
+
+    function isBlocked() {
+      return !isConstructorPage() && constructorSkus().length > 0;
+    }
+
+    /** Убрать блюда конструктора и перерисовать корзину — как это делает сама Тильда */
+    function removeAll() {
+      if (typeof window.tcart__syncProductsObject__LStoObj === 'function') {
+        window.tcart__syncProductsObject__LStoObj();
+      }
+      if (!window.tcart) return;
+      window.tcart.products = products().filter(function (product) {
+        return !product || !RULE.sku.test(String(product.sku));
+      });
+      ['tcart__updateTotalProductsinCartObj', 'tcart__reDrawCartIcon', 'tcart__saveLocalObj',
+        'tcart__reDrawProducts', 'tcart__reDrawTotal'].forEach(function (name) {
+        if (typeof window[name] === 'function') window[name]();
+      });
+      check();
+    }
+
+    function createWarning() {
+      var box = document.createElement('div');
+      box.className = 'ncdm-cart-guard t-text';
+
+      var text = document.createElement('p');
+      text.textContent = RULE.texts.warning;
+
+      var actions = document.createElement('div');
+      actions.className = 'ncdm-cart-guard-actions';
+
+      var go = document.createElement('a');
+      go.className = 'ncdm-cart-guard-button ncdm-cart-guard-go';
+      go.href = RULE.url;
+      go.textContent = RULE.texts.go;
+
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'ncdm-cart-guard-button ncdm-cart-guard-remove';
+      remove.textContent = RULE.texts.remove;
+      remove.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        removeAll();
+      });
+
+      actions.appendChild(go);
+      actions.appendChild(remove);
+      box.appendChild(text);
+      box.appendChild(actions);
+      return box;
+    }
+
+    /** Вставляем, только если предупреждения ещё нет: иначе MutationObserver крутил бы scan по кругу */
+    function placeWarning(parent, before, show) {
+      var current = null;
+      Array.prototype.forEach.call(parent.children, function (child) {
+        if (child.classList.contains('ncdm-cart-guard')) current = child;
+      });
+      if (!show) {
+        if (current) current.remove();
+        return;
+      }
+      if (!current) parent.insertBefore(createWarning(), before);
+    }
+
+    /**
+     * «Оформить заказ» на первом шаге полноэкранной корзины. disabled снимаем только свой
+     * (data-ncdm-disabled), чтобы не сбить блокировку самой Тильды — например, по минимальной сумме
+     */
+    function lockContinue(locked) {
+      Array.prototype.forEach.call(document.querySelectorAll(RULE.cartContinue), function (btn) {
+        btn.classList.toggle('ncdm-submit-locked', locked);
+        if (locked) {
+          if (!btn.disabled) {
+            btn.disabled = true;
+            btn.setAttribute('data-ncdm-disabled', '1');
+          }
+          btn.setAttribute('aria-disabled', 'true');
+        } else if (btn.hasAttribute('data-ncdm-disabled')) {
+          btn.disabled = false;
+          btn.removeAttribute('data-ncdm-disabled');
+          btn.removeAttribute('aria-disabled');
+        }
+      });
+    }
+
+    function lockSubmit(locked) {
+      Array.prototype.forEach.call(document.querySelectorAll(RULE.cartForm), function (form) {
+        var submit = form.querySelector(CONFIG.submit);
+        if (submit) {
+          var anchor = submit.closest('.t-form__submit') || submit;
+          placeWarning(anchor.parentNode, anchor, locked);
+        }
+
+        // в форме с полем даты кнопку ведёт updateSubmit, он учитывает isBlocked()
+        if (form.querySelector(CONFIG.dateInput)) return;
+        Array.prototype.forEach.call(form.querySelectorAll(CONFIG.submit), function (btn) {
+          btn.classList.toggle('ncdm-submit-locked', locked);
+          if ('disabled' in btn) btn.disabled = locked;
+          btn.setAttribute('aria-disabled', String(locked));
+        });
+      });
+    }
+
+    function check() {
+      if (isConstructorPage()) return;   // там свои проверки — в constructor.js
+
+      var locked = constructorSkus().length > 0;
+      if (locked) injectStyles();
+
+      Array.prototype.forEach.call(document.querySelectorAll(RULE.cartList), function (list) {
+        placeWarning(list, list.firstChild, locked);
+      });
+      lockContinue(locked);
+      lockSubmit(locked);
+      Array.prototype.forEach.call(document.querySelectorAll(CONFIG.dateInput), updateSubmit);
+    }
+
+    return { isBlocked: isBlocked, check: check };
+  })();
 
   // ==================== ИНИЦИАЛИЗАЦИЯ ПОЛЯ ====================
 
@@ -329,6 +510,7 @@
   function scan() {
     clearTimeout(timer);
     timer = setTimeout(function () {
+      guard.check();
       if (!document.querySelector(CONFIG.dateInput)) return;
 
       loadLib().then(function () {
@@ -357,16 +539,26 @@
     scan();
   }, true);
 
+  // корзину могли поменять в другой вкладке
+  window.addEventListener('storage', function (e) {
+    if (e.key !== 'tcart') return;
+    if (typeof window.tcart__syncProductsObject__LStoObj === 'function') {
+      window.tcart__syncProductsObject__LStoObj();
+    }
+    scan();
+  });
+
   window.addEventListener('load', scan);
   setInterval(scan, 60000); // подхватить наступление отсечки на открытой странице
 
   scan();
 
   window.NCDM_DELIVERY_PICKER = {
-    VERSION: 'fitbox-1.0.2', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
+    VERSION: 'fitbox-1.1.0', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
     CONFIG: CONFIG,
     scan: scan,
     updateSubmit: updateSubmit,
-    isDateValid: isDateValid
+    isDateValid: isDateValid,
+    isCartBlocked: guard.isBlocked
   };
 })();
