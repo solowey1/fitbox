@@ -503,6 +503,39 @@
     hint.textContent = getHintText(city, min);
   }
 
+  // ==================== ПОЛЯ ФОРМЫ КОРЗИНЫ ====================
+
+  /**
+   * Ошибка Тильды: когда ширина окна пересекает 960px (поворот экрана, масштаб браузера,
+   * открытые DevTools), она заново вызывает tcart__init — тот прячет все поля формы,
+   * а показать их tcart__initAuthAndDelivery() уже не может: она отрабатывает один раз.
+   * Корзина остаётся без полей до перезагрузки. Если поля спрятаны целиком уже после
+   * инициализации, повторяем её принудительно — это вызов самой Тильды, со всеми её проверками.
+   */
+  var lastFieldsRestore = 0;
+
+  function restoreFormFields() {
+    if (!window.tcart_isAuthInited || typeof window.tcart__initAuthAndDelivery !== 'function') return;
+
+    // блок способа оплаты сайт стилизует сам — его style не показатель
+    var groups = document.querySelectorAll('.t706 .t-input-group:not(.t-input-group_pm)');
+    if (!groups.length) return;
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].style.display !== 'none') return;
+    }
+
+    // заказ только для авторизованных: поля прячет сама Тильда, так и должно быть
+    var auth = window.tcartAuthState || {};
+    var required = auth.lkpSettings && auth.lkpSettings.auth_required === 'required';
+    if (required && !(auth.mauser && auth.mauser.token)) return;
+
+    // пока Тильда ждёт ответа об авторизации, поля тоже скрыты — не дёргаем её чаще раза в 3 секунды
+    if (Date.now() - lastFieldsRestore < 3000) return;
+    lastFieldsRestore = Date.now();
+
+    window.tcart__initAuthAndDelivery(true);
+  }
+
   // ==================== НАБЛЮДЕНИЕ ЗА КОРЗИНОЙ ====================
 
   var timer = null;
@@ -510,6 +543,7 @@
   function scan() {
     clearTimeout(timer);
     timer = setTimeout(function () {
+      restoreFormFields();
       guard.check();
       if (!document.querySelector(CONFIG.dateInput)) return;
 
@@ -554,7 +588,7 @@
   scan();
 
   window.NCDM_DELIVERY_PICKER = {
-    VERSION: 'fitbox-1.1.0', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
+    VERSION: 'fitbox-1.1.1', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
     CONFIG: CONFIG,
     scan: scan,
     updateSubmit: updateSubmit,
