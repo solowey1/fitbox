@@ -471,6 +471,12 @@ const renderProgramButtons = (programs) => {
 
     wrapper.appendChild(label);
   });
+
+  const calcHref = document.createElement('a');
+  calcHref.classList.add('menu-button', 'summary-button');
+  calcHref.setAttribute('href', '#popup:calc');
+  calcHref.innerHTML = 'Калькулятор калорий';
+  wrapper.appendChild(calcHref);
 };
 
 /**
@@ -534,9 +540,13 @@ const renderProgramSlider = (programs) => {
       <span class="program-logo-text">${program.slogan}</span>
     `;
 
+    const titleLink = document.createElement('a');
+    titleLink.classList.add('program-title-link');
+    titleLink.setAttribute('href', '#menu');
     const title = document.createElement('h2');
     title.classList.add('program-title-text');
     title.textContent = program.title;
+    titleLink.appendChild(title);
 
     const text = document.createElement('div');
     text.classList.add('program-content-text');
@@ -548,7 +558,7 @@ const renderProgramSlider = (programs) => {
     button.textContent = 'Калькулятор калорий';
 
     wrapper.appendChild(logo);
-    wrapper.appendChild(title);
+    wrapper.appendChild(titleLink);
     wrapper.appendChild(text);
     wrapper.appendChild(button);
     slide.appendChild(wrapper);
@@ -745,13 +755,15 @@ const setActiveProgram = (program) => {
     }
   });
 
-  // Обновляем активные классы кнопок целей
-  document.querySelectorAll('.target-button').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.getAttribute('data-program-id') == program.id) {
-      btn.classList.add('active');
-    }
-  });
+  // Обновляем активные классы кнопок целей (если блок «Выбор цели» на странице)
+  if (blockTarget) {
+    document.querySelectorAll('.target-button').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.getAttribute('data-program-id') == program.id) {
+        btn.classList.add('active');
+      }
+    });
+  }
 
   // Обновляем summary блок
   updateProgramSummary(program);
