@@ -258,7 +258,7 @@
 
     deliveryCorePromise = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = `${new URL(apiBaseUrl).origin}/scripts/delivery-date.js`;
+      script.src = `${new URL(apiBaseUrl).origin}/web/shared/delivery-date.js`;
       script.onload = () => (window.NCDM_DELIVERY ? resolve(window.NCDM_DELIVERY) : reject(new Error('NCDM_DELIVERY не найден')));
       script.onerror = () => {
         deliveryCorePromise = null;
