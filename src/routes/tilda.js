@@ -7,6 +7,7 @@ const {
   getDishDetails,
   getConstructorMenu
 } = require('../controllers/tildaController');
+const { getDeliveryZone } = require('../controllers/deliveryZoneController');
 
 /**
  * Публичные роуты для Tilda frontend
@@ -29,5 +30,9 @@ router.get('/dishes/:dishId', cacheMiddleware(1800), getDishDetails);
 // Блюда и приёмы пищи для конструктора «Собери своё меню», меню по датам (?dates=&city=)
 // Кэш: 5 минут — изменения меню в Budibase появляются на сайте не позже чем через 5 минут
 router.get('/constructor', cacheMiddleware(300), getConstructorMenu);
+
+// Зона доставки по адресу из корзины (?city=&street=&house=&corpus=) — надбавка к доставке конструктора
+// Кэш: сутки — адрес и зоны меняются редко, а геокодер просит не дёргать его без нужды
+router.get('/delivery-zone', cacheMiddleware(86400), getDeliveryZone);
 
 module.exports = router;
