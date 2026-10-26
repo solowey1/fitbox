@@ -202,8 +202,8 @@ curl -X POST http://localhost:3000/api/programs \
 backend/
 ├── documents/           # 📚 Документация
 ├── migrations/          # 🗄️  SQL миграции
-├── public/              # 📦 Статические файлы (HTML, CSS)
-├── scripts/             # 🔧 Вспомогательные скрипты (migrate, tilda)
+├── web/                 # 📦 Файлы для Тильды по страницам (programs, constructor, shared)
+├── scripts/             # 🔧 Серверные скрипты (migrate, пересчёт КБЖУ, зоны доставки)
 ├── src/
 │   ├── config/          # ⚙️  Конфигурация (БД)
 │   ├── controllers/     # 🎮 Контроллеры API

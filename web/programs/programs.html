@@ -1,5 +1,14 @@
-<!-- Выбор программы -->
+<!--
+  Программы питания — блок T123 на главной fitbox.su и поддоменах (kzn, smr, tlt, dmt).
+  Стили: web/programs/programs.css (вставить в <style> в соседнем T123).
+  Скрипт: https://app.fitbox.su/web/programs/programs.js
+  Блок «Выбор цели» сейчас отключён, его разметка — web/programs/target.html.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
 
+<!-- Выбор программы -->
 <div id="menu">
   <div class="menu-wrapper">
     <div class="choose-wrapper">
@@ -90,7 +99,9 @@
           <span class="program-logo-text">Кушай на&nbsp;работе</span>
         </div>
         <div class="program-title">
-          <h2 class="program-title-text">Офис</h2>
+          <a href="#menu" class="program-title-link">
+            <h2 class="program-title-text">Офис</h2>
+          </a>
           <span class="program-title-descr calories">800-900</span>
           <span class="program-title-descr bju">56/17/116 б/ж/у</span>
           <span class="program-title-descr count">Блюд в день: <span>3</span></span>
@@ -158,3 +169,7 @@
     </div>
   </div>
 </div>
+
+<!-- html2canvas — картинка меню для корзины -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.3.2/html2canvas.min.js" defer></script>
+<script src="https://app.fitbox.su/web/programs/programs.js" defer></script>
