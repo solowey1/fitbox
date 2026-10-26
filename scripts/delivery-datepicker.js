@@ -7,10 +7,13 @@
  * В форме корзины нужно поле «Input» с именем переменной date.
  * Дата уходит в заказ как ДД.ММ.ГГГГ и сохраняется в orders.delivery_date.
  *
- * Скрипт подключён на всех страницах с корзиной, поэтому здесь же правило корзины:
- * блюда «Собери своё меню» (артикул D<id>-<ГГГГММДД>) оформляются только на странице
- * конструктора. На других страницах заказ с ними блокируется — с предупреждением,
- * ссылкой на конструктор и кнопкой «Убрать из корзины».
+ * Скрипт подключён на всех страницах с корзиной, поэтому здесь же правило корзины
+ * «каждый товар — на своей странице»:
+ * - блюда «Собери своё меню» (артикул D<id>-<ГГГГММДД>) и их доставка (FBC-DELIVERY)
+ *   оформляются только на странице конструктора;
+ * - программы питания — только на остальных страницах (не в конструкторе).
+ * Чужие для страницы товары в корзине полупрозрачные, заказ блокируется —
+ * с предупреждением, ссылкой на нужную страницу и кнопкой «Убрать из корзины».
  */
 (function () {
   'use strict';
@@ -45,19 +48,32 @@
     accent: '#111111',
     zIndex: 100000000,
 
-    // блюда конструктора — только на странице конструктора
-    constructorOnly: {
-      page: '#constructor.fbc',            // разметка конструктора: на этой странице правило не действует
-      url: '/constructor',
-      sku: /^D\d+(?:-\d{8})?$/i,
+    // каждый товар — на своей странице: блюда конструктора — в конструкторе, программы — вне его
+    pageRules: {
+      constructorPage: '#constructor.fbc',   // разметка конструктора
+      constructorSku: /^(?:D\d+(?:-\d{8})?|FBC-DELIVERY)$/i, // блюда конструктора и их доставка
       cartList: '.t706__cartwin-products, .t706__sidebar-products, .t706__cartpage-products',
       cartForm: '.t706 form',
       cartContinue: '.t706__sidebar-continue, .t706__cartpage-open-form',
-      texts: {
-        warning: 'Блюда из «Собери своё меню» оформляются только на странице конструктора. ' +
-          'Перейдите в конструктор или уберите их из корзины.',
-        go: 'Перейти в конструктор',
-        remove: 'Убрать из корзины'
+      // на странице конструктора нельзя оформить программы питания
+      onConstructorPage: {
+        url: '/',
+        texts: {
+          warning: 'Программы питания оформляются на странице программ, а здесь — только блюда конструктора. ' +
+            'Перейдите к программам или уберите их из корзины.',
+          go: 'Перейти к программам',
+          remove: 'Убрать из корзины'
+        }
+      },
+      // на остальных страницах нельзя оформить блюда конструктора
+      onOtherPages: {
+        url: '/constructor',
+        texts: {
+          warning: 'Блюда из «Собери своё меню» оформляются только на странице конструктора. ' +
+            'Перейдите в конструктор или уберите их из корзины.',
+          go: 'Перейти в конструктор',
+          remove: 'Убрать из корзины'
+        }
       }
     }
   };
@@ -114,7 +130,10 @@
       '.ncdm-cart-guard-go{color:#fff !important;background:#e5383b;}',
       '.ncdm-cart-guard-go:hover{color:#e5383b !important;background:transparent;}',
       '.ncdm-cart-guard-remove{color:#e5383b;background:transparent;}',
-      '.ncdm-cart-guard-remove:hover{color:#fff;background:#e5383b;}'
+      '.ncdm-cart-guard-remove:hover{color:#fff;background:#e5383b;}',
+      // товар, который нельзя оформить на этой странице: полупрозрачный, удалить его можно
+      '.t706__product.ncdm-cart-row-foreign{opacity:.45;transition:opacity .2s ease;}',
+      '.t706__product.ncdm-cart-row-foreign .t706__product-plusminus{pointer-events:none;}'
     ].join('');
     document.head.appendChild(style);
   }
@@ -234,17 +253,17 @@
 
   document.addEventListener('submit', function (e) {
     var input = e.target.querySelector && e.target.querySelector(CONFIG.dateInput);
-    var blocked = guard.isBlocked() && e.target.matches && e.target.matches(CONFIG.constructorOnly.cartForm);
+    var blocked = guard.isBlocked() && e.target.matches && e.target.matches(CONFIG.pageRules.cartForm);
     if (blocked || (input && !isDateValid(input))) {
       e.preventDefault();
       e.stopPropagation();
     }
   }, true);
 
-  // ==================== БЛЮДА КОНСТРУКТОРА — ТОЛЬКО В КОНСТРУКТОРЕ ====================
+  // ==================== КАЖДЫЙ ТОВАР — НА СВОЕЙ СТРАНИЦЕ ====================
 
   var guard = (function () {
-    var RULE = CONFIG.constructorOnly;
+    var RULE = CONFIG.pageRules;
 
     function products() {
       return (window.tcart && Array.isArray(window.tcart.products)) ? window.tcart.products : [];
@@ -255,30 +274,40 @@
       return !!product && product.deleted !== 'yes' && (parseInt(product.quantity, 10) || 0) > 0;
     }
 
-    function constructorSkus() {
-      var skus = [];
-      products().forEach(function (product) {
-        if (isInCart(product) && RULE.sku.test(String(product.sku))) skus.push(String(product.sku));
-      });
-      return skus;
+    function isConstructorPage() {
+      return !!document.querySelector(RULE.constructorPage);
     }
 
-    function isConstructorPage() {
-      return !!document.querySelector(RULE.page);
+    /** Правила и тексты этой страницы */
+    function pageRule() {
+      return isConstructorPage() ? RULE.onConstructorPage : RULE.onOtherPages;
+    }
+
+    /** Товар нельзя оформить на этой странице */
+    function isForeign(product) {
+      if (!product) return false;
+      var isConstructorItem = RULE.constructorSku.test(String(product.sku || ''));
+      return isConstructorPage() ? !isConstructorItem : isConstructorItem;
+    }
+
+    function foreignCount() {
+      return products().filter(function (product) {
+        return isInCart(product) && isForeign(product);
+      }).length;
     }
 
     function isBlocked() {
-      return !isConstructorPage() && constructorSkus().length > 0;
+      return foreignCount() > 0;
     }
 
-    /** Убрать блюда конструктора и перерисовать корзину — как это делает сама Тильда */
+    /** Убрать чужие товары и перерисовать корзину — как это делает сама Тильда */
     function removeAll() {
       if (typeof window.tcart__syncProductsObject__LStoObj === 'function') {
         window.tcart__syncProductsObject__LStoObj();
       }
       if (!window.tcart) return;
       window.tcart.products = products().filter(function (product) {
-        return !product || !RULE.sku.test(String(product.sku));
+        return !isForeign(product);
       });
       ['tcart__updateTotalProductsinCartObj', 'tcart__reDrawCartIcon', 'tcart__saveLocalObj',
         'tcart__reDrawProducts', 'tcart__reDrawTotal'].forEach(function (name) {
@@ -287,25 +316,35 @@
       check();
     }
 
+    /** Строки корзины с чужими товарами — полупрозрачные (класс, а не style: Тильда строки перерисовывает) */
+    function markRows(list) {
+      var all = products();
+      Array.prototype.forEach.call(list.querySelectorAll('.t706__product[data-cart-product-i]'), function (row) {
+        var product = all[parseInt(row.getAttribute('data-cart-product-i'), 10)];
+        row.classList.toggle('ncdm-cart-row-foreign', isInCart(product) && isForeign(product));
+      });
+    }
+
     function createWarning() {
       var box = document.createElement('div');
       box.className = 'ncdm-cart-guard t-text';
 
+      var rule = pageRule();
       var text = document.createElement('p');
-      text.textContent = RULE.texts.warning;
+      text.textContent = rule.texts.warning;
 
       var actions = document.createElement('div');
       actions.className = 'ncdm-cart-guard-actions';
 
       var go = document.createElement('a');
       go.className = 'ncdm-cart-guard-button ncdm-cart-guard-go';
-      go.href = RULE.url;
-      go.textContent = RULE.texts.go;
+      go.href = rule.url;
+      go.textContent = rule.texts.go;
 
       var remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'ncdm-cart-guard-button ncdm-cart-guard-remove';
-      remove.textContent = RULE.texts.remove;
+      remove.textContent = rule.texts.remove;
       remove.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -319,7 +358,10 @@
       return box;
     }
 
-    /** Вставляем, только если предупреждения ещё нет: иначе MutationObserver крутил бы scan по кругу */
+    /**
+     * Вставляем, только если предупреждения ещё нет: иначе MutationObserver крутил бы scan по кругу.
+     * Тексты зависят от страницы, а она за время жизни скрипта не меняется
+     */
     function placeWarning(parent, before, show) {
       var current = null;
       Array.prototype.forEach.call(parent.children, function (child) {
@@ -372,13 +414,12 @@
     }
 
     function check() {
-      if (isConstructorPage()) return;   // там свои проверки — в constructor.js
-
-      var locked = constructorSkus().length > 0;
+      var locked = isBlocked();
       if (locked) injectStyles();
 
       Array.prototype.forEach.call(document.querySelectorAll(RULE.cartList), function (list) {
         placeWarning(list, list.firstChild, locked);
+        markRows(list);
       });
       lockContinue(locked);
       lockSubmit(locked);
@@ -588,7 +629,7 @@
   scan();
 
   window.NCDM_DELIVERY_PICKER = {
-    VERSION: 'fitbox-1.1.1', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
+    VERSION: 'fitbox-1.2.0', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
     CONFIG: CONFIG,
     scan: scan,
     updateSubmit: updateSubmit,
