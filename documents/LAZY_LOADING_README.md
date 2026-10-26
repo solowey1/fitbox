@@ -106,17 +106,11 @@ weekInCycle = (Math.floor(days / 7) % 4) + 1
 
 ## 3. Интеграция на Tilda
 
-### Подключение CSS
+### Подключение
 
-```html
-<link rel="stylesheet" href="https://app.fitbox.su/scripts/dish-styles.css">
-```
-
-### Подключение JavaScript
-
-```html
-<script src="https://app.fitbox.su/scripts/tilda.js"></script>
-```
+Стили карточек (в том числе `.dish-card-image`) — в `web/programs/programs.css`,
+скрипт — `https://app.fitbox.su/web/programs/programs.js`, подключается из
+`web/programs/programs.html`. Подробнее — [TILDA_CONNECT.md](./TILDA_CONNECT.md).
 
 ### Пример структуры HTML
 
