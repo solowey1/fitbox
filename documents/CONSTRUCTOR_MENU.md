@@ -92,7 +92,7 @@
 `GET /api/tilda/constructor?city=Казань&dates=2026-10-25,2026-10-27` — блюда и меню на даты:
 `availability` — id блюд, которые продаются в каждую дату. Подробнее — в [TILDA_API.md](./TILDA_API.md).
 
-Сколько дней показывать на сайте — настройка `daysToShow` в начале `scripts/constructor.js`.
+Сколько дней показывать на сайте — настройка `daysToShow` в начале `web/constructor/constructor.js`.
 
 ## Дни меню и доставка
 
@@ -109,5 +109,5 @@
 - товар «Доставка» (`FBC-DELIVERY`) с днями и зоной в характеристиках — его ведёт скрипт;
 - поле «Зона доставки» под «Подъездом» и «Этажом» и строка «Доставка» над «Итого».
 
-Настройки — `CONFIG.delivery` и `CONFIG.colors` в `scripts/constructor.js`; зоны — см.
+Настройки — `CONFIG.delivery` и `CONFIG.colors` в `web/constructor/constructor.js`; зоны — см.
 «Зона доставки по адресу» в [TILDA_API.md](./TILDA_API.md).

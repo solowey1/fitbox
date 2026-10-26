@@ -1,48 +1,56 @@
-# Скрипты для Tilda
+# Файлы для Tilda
 
-## Подключение скрипта на Tilda
+Всё, что стоит на сайтах Тильды, лежит в `web/` — по страницам:
 
-### Вариант 1: Подключение через CDN (рекомендуется)
-
-Добавьте в Tilda Zero Block или в настройки страницы (T123 → Настройки → Дополнительно → HTML-код для вставки внутри <head>):
-
-```html
-<!-- Скрипт для меню Fitbox -->
-<script src="https://app.fitbox.su/scripts/tilda.js"></script>
+```
+web/
+  shared/        delivery-date.js, delivery-datepicker.js — на всех страницах с корзиной;
+                 cart.css — копия стилей корзины (общий блок rec720385276)
+  programs/      главная fitbox.su и поддомены: programs.html, programs.css, programs.js;
+                 target.html — блок «Выбор цели» (сейчас отключён)
+  constructor/   «Собери своё меню» (kzn.fitbox.su/constructor): constructor.html, .css, .js
+  dev/           delivery-cutoff-tester.js — только для проверки отсечки
+  legacy/        tilda-old.js — старая версия скрипта программ
 ```
 
-### Вариант 2: Inline скрипт (если CDN недоступен)
+Сервер отдаёт папку по адресу `https://app.fitbox.su/web/…` (кэш браузера — 1 час).
+`.html` и `.css` вставляются в блоки T123 (CSS — внутри тега `style`), `.js` подключаются ссылкой —
+после деплоя обновляются сами, ничего вставлять на Тильде не нужно.
 
-Скопируйте содержимое файла `tilda.js` и вставьте в Zero Block:
+Старые адреса `https://app.fitbox.su/scripts/*.js` пока работают и отдают те же файлы —
+чтобы ничего не сломалось, пока на Тильде не заменили ссылки. После замены их можно убрать
+(`legacyScripts` в `index.js`).
 
-```html
-<script>
-// Вставьте сюда содержимое tilda.js
-</script>
-```
+## Что где стоит на Тильде
 
-## Доступные скрипты
+| Где | Что вставлено |
+|-----|---------------|
+| Сайт kzn.fitbox.su → Настройки сайта → Ещё → HTML-код в HEAD | `<script>` с `web/shared/delivery-date.js`, `web/shared/delivery-datepicker.js`, `web/dev/delivery-cutoff-tester.js` |
+| Главная (оригиналы блоков, на поддоменах — их копии): T123 rec1935240611 | `web/programs/programs.css` внутри тега `style` |
+| Главная: T123 rec1935240641 | `web/programs/programs.html` (подключает `programs.js` и html2canvas) |
+| Конструктор: T123 rec5076266601 | `web/constructor/constructor.css` внутри тега `style` |
+| Конструктор: T123 rec5076274801 | `web/constructor/constructor.html` (подключает `constructor.js`) |
+| Все сайты: общий блок T123 rec720385276 | `web/shared/cart.css` внутри тега `style` |
 
-### tilda.js (Рекомендуется)
+## Программы питания (главная)
 
-**Описание:** Упрощенная версия с использованием единого API эндпоинта
+**Файлы:** `web/programs/programs.html` (разметка), `programs.css` (стили), `programs.js` (логика).
 
-**Особенности:**
-- ✅ Два запроса вместо множества
-- ✅ Автоопределение города по поддомену
-- ✅ Минимальная логика на фронтенде
+Два блока T123:
+1. стили — содержимое `programs.css` внутри тега `style`;
+2. разметка — `programs.html` целиком. В конце файла подключены html2canvas и
+   `https://app.fitbox.su/web/programs/programs.js`.
 
-**URL:** `https://app.fitbox.su/scripts/tilda.js`
+`programs.js` — упрощённая версия с единым API: два запроса к `/api/tilda/menu`,
+город по поддомену, данные кэшируются в localStorage на 60 минут.
+
+Блок «Выбор цели» сейчас отключён. Чтобы включить, вставьте `web/programs/target.html`
+в начало `programs.html` — стили слайдера уже в `programs.css`, скрипт найдёт блок сам.
 
 ### tilda-old.js (Legacy)
 
-**Описание:** Оригинальная версия с множеством запросов к API
-
-**Использовать только для:**
-- Обратной совместимости со старыми страницами
-- Специфических кастомизаций
-
-**URL:** `https://app.fitbox.su/scripts/tilda-old.js`
+Оригинальная версия с множеством запросов к API — только для обратной совместимости.
+**URL:** `https://app.fitbox.su/web/legacy/tilda-old.js`
 
 ### delivery-date.js + delivery-datepicker.js (дата доставки в корзине)
 
@@ -62,8 +70,8 @@
 удобнее всего в «Настройки сайта → Ещё → HTML-код для вставки внутрь HEAD»:
 
 ```html
-<script src="https://app.fitbox.su/scripts/delivery-date.js"></script>
-<script src="https://app.fitbox.su/scripts/delivery-datepicker.js"></script>
+<script src="https://app.fitbox.su/web/shared/delivery-date.js"></script>
+<script src="https://app.fitbox.su/web/shared/delivery-datepicker.js"></script>
 ```
 
 **В форме корзины** нужно поле «Input» с именем переменной `date`, обязательное.
@@ -86,6 +94,7 @@
 Подменяет текущие дату и время, чтобы проверить календарь до и после отсечки.
 Подключается после двух скриптов выше. Тестовый блок сам встраивается в форму
 корзины перед полем даты доставки. На боевые страницы не ставить.
+**URL:** `https://app.fitbox.su/web/dev/delivery-cutoff-tester.js`
 
 ### constructor.js (страница «Собери своё меню»)
 
@@ -100,8 +109,9 @@
 задаётся атрибутом `data-city` у `#constructor`, иначе — по поддомену.
 
 **Подключение на странице** (сайт kzn.fitbox.su):
-1. Блок T123: разметка из `public/web/html/constructor.html`, стили из
-   `public/web/style/constructor.css` — в `<style>` в этом же или соседнем T123.
+1. Блок T123: разметка из `web/constructor/constructor.html` (подключает
+   `https://app.fitbox.su/web/constructor/constructor.js`), стили из
+   `web/constructor/constructor.css` — внутри тега `style` в соседнем T123.
 2. Корзина T706 — та же, что на остальных страницах, с полем `date`
    и скриптами доставки.
 
@@ -119,7 +129,8 @@
 
 ### HTML структура
 
-Скрипт ожидает следующую структуру HTML на странице (`public/web/html/target.html`):
+Скрипт ожидает следующую структуру HTML на странице (`web/programs/programs.html`,
+блок «Выбор цели» — `web/programs/target.html`, необязателен):
 
 ```html
 <!-- Блок с кнопками выбора цели -->
@@ -185,8 +196,8 @@
 
 - **Swiper.js** (для слайдера программ)
   ```html
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
   ```
 
 - **html2canvas** (для скриншота карточки товара в корзине)
@@ -198,7 +209,7 @@
 
 ### Изменение API URL
 
-По умолчанию используется [https://app.fitbox.su/api](https://app.fitbox.su/api). Для изменения поменяйте в скрипте `scripts/tilda.js`:
+По умолчанию используется [https://app.fitbox.su/api](https://app.fitbox.su/api). Для изменения поменяйте в скрипте `web/programs/programs.js`:
 
 ```javascript
 const API_BASE_URL = 'https://app.fitbox.su/api';
@@ -274,7 +285,7 @@ fetch('https://app.fitbox.su/api/tilda/menu')
 
 Решение: Добавьте перед скриптом:
 ```html
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
 ```
 
 **3. Кнопки не генерируются**
@@ -293,7 +304,7 @@ console.log(document.querySelector('.program-buttons-wrapper')); // Должен
 
 1. **Используйте async/defer** при подключении скрипта:
 ```html
-<script src="https://app.fitbox.su/scripts/tilda.js" defer></script>
+<script src="https://app.fitbox.su/web/programs/programs.js" defer></script>
 ```
 
 2. **Включите кэширование** на стороне сервера (уже настроено: 1 час)
@@ -305,11 +316,11 @@ console.log(document.querySelector('.program-buttons-wrapper')); // Должен
 При обновлении скрипта используйте версионирование в URL:
 
 ```html
-<!-- Без версии (всегда последняя) -->
-<script src="https://app.fitbox.su/scripts/tilda.js"></script>
+<!-- Без версии (всегда последняя, обновится у посетителей в течение часа) -->
+<script src="https://app.fitbox.su/web/programs/programs.js"></script>
 
-<!-- С версией (рекомендуется для продакшена) -->
-<script src="https://app.fitbox.su/scripts/tilda.js?v=1.0.0"></script>
+<!-- С версией — новая версия сразу, но ссылку на Тильде нужно менять -->
+<script src="https://app.fitbox.su/web/programs/programs.js?v=1.0.0"></script>
 ```
 
 ## Поддержка
