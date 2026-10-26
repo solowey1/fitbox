@@ -23,27 +23,46 @@ const parseDeliveryDate = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
+// Товар «Доставка» конструктора: сумма доставок всех дней + надбавка за зону
+const DELIVERY_SKU = 'FBC-DELIVERY';
+
 /**
  * Разбор SKU товара из корзины Тильды:
  * - '5'            → программа питания с id 5
- * - 'D12-20261023' → блюдо конструктора с id 12 на 23.10.2026
+ * - 'D12-20261023' → блюдо конструктора с id 12 на день меню 23.10.2026
  * - 'D12'          → блюдо конструктора без даты (старые корзины)
+ * - 'FBC-DELIVERY' → доставка конструктора
  */
 const parseSku = (sku) => {
   const str = String(sku || '').trim();
+  const empty = { dishId: null, nutritionProgramId: null, menuDate: null, isDelivery: false };
+
+  if (str.toUpperCase() === DELIVERY_SKU) return { ...empty, isDelivery: true };
 
   const dish = /^D(\d+)(?:-(\d{4})(\d{2})(\d{2}))?$/i.exec(str);
   if (dish) {
     return {
+      ...empty,
       dishId: parseInt(dish[1], 10),
-      nutritionProgramId: null,
-      deliveryDate: dish[2] ? parseDeliveryDate(`${dish[2]}-${dish[3]}-${dish[4]}`) : null,
+      menuDate: dish[2] ? parseDeliveryDate(`${dish[2]}-${dish[3]}-${dish[4]}`) : null,
     };
   }
 
-  if (/^\d+$/.test(str)) return { dishId: null, nutritionProgramId: parseInt(str, 10), deliveryDate: null };
+  if (/^\d+$/.test(str)) return { ...empty, nutritionProgramId: parseInt(str, 10) };
 
-  return { dishId: null, nutritionProgramId: null, deliveryDate: null };
+  return empty;
+};
+
+/**
+ * Дата доставки блюда конструктора: опция «Доставка» (ДД.ММ.ГГГГ) — на день без доставки
+ * блюда привозят накануне. В старых корзинах опции нет: дата из артикула и была датой доставки.
+ */
+const DELIVERY_OPTION = 'Доставка';
+
+const itemDeliveryDate = (product) => {
+  const { menuDate } = parseSku(product.sku);
+  const option = (product.options || []).find(opt => opt.option === DELIVERY_OPTION);
+  return (option && parseDeliveryDate(option.variant)) || menuDate;
 };
 
 // Получить все заказы
@@ -121,9 +140,14 @@ const createOrder = async (req, res) => {
     // Дата доставки заказа: из поля корзины, а если его нет (в корзине только блюда
     // конструктора, у каждого своя дата) — самая ранняя дата блюд
     const itemDates = products
-      .map(product => parseSku(product.sku).deliveryDate)
+      .map(itemDeliveryDate)
       .filter(Boolean)
       .sort();
+
+    // Доставка конструктора — отдельным товаром, в позиции заказа не попадает
+    const deliveryPrice = products
+      .filter(product => parseSku(product.sku).isDelivery)
+      .reduce((sum, product) => sum + (parseFloat(product.amount) || 0), 0);
     const orderDeliveryDate = parseDeliveryDate(body.date) || itemDates[0] || null;
 
     // Создать заказ
@@ -132,8 +156,8 @@ const createOrder = async (req, res) => {
         name, email, phone, communicate, communicate_type,
         city, street, house, corpus, flat, entrance, floor,
         comment, promocode, source, payment_system,
-        tilda_order_id, total_amount, current_price, tilda_raw_data, delivery_date
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+        tilda_order_id, total_amount, current_price, tilda_raw_data, delivery_date, delivery_price
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
       RETURNING *`,
       [
         body.name || null,
@@ -157,6 +181,7 @@ const createOrder = async (req, res) => {
         payment.amount ? parseFloat(payment.amount) : null,
         JSON.stringify(body),
         orderDeliveryDate,
+        deliveryPrice || null,
       ]
     );
 
@@ -176,7 +201,8 @@ const createOrder = async (req, res) => {
 
     // Добавить элементы заказа
     for (const product of products) {
-      const { dishId, nutritionProgramId, deliveryDate } = parseSku(product.sku);
+      const { dishId, nutritionProgramId, menuDate, isDelivery } = parseSku(product.sku);
+      if (isDelivery) continue; // сохранена в orders.delivery_price
 
       if (!dishId && !nutritionProgramId) {
         console.warn('Order item with unknown SKU:', { orderId, sku: product.sku, name: product.name });
@@ -202,8 +228,8 @@ const createOrder = async (req, res) => {
       }
 
       await client.query(
-        `INSERT INTO order_items (order_id, nutrition_program_id, dish_id, price_id, quantity, price, delivery_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        `INSERT INTO order_items (order_id, nutrition_program_id, dish_id, price_id, quantity, price, delivery_date, menu_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           orderId,
           nutritionProgramId,
@@ -211,7 +237,8 @@ const createOrder = async (req, res) => {
           priceId,
           product.quantity || 1,
           product.amount ? parseFloat(product.amount) : null,
-          deliveryDate,
+          dishId ? itemDeliveryDate(product) : null,
+          menuDate,
         ]
       );
     }
@@ -226,6 +253,7 @@ const createOrder = async (req, res) => {
                 'nutrition_program_id', oi.nutrition_program_id,
                 'dish_id', oi.dish_id,
                 'delivery_date', oi.delivery_date,
+                'menu_date', oi.menu_date,
                 'price_id', oi.price_id,
                 'quantity', oi.quantity,
                 'price', oi.price,

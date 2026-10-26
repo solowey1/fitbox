@@ -492,13 +492,17 @@ const getDishDetails = async (req, res) => {
  *
  * Query параметры:
  * - dates: даты через запятую (ГГГГ-ММ-ДД, до 31 шт.) — тогда в ответе availability:
- *   какие блюда продаются в каждую дату (цикл constructor_menu + исключения на дату),
+ *   какие блюда продаются в каждую дату (цикл constructor_menu + исключения на дату
+ *   + остатки предыдущего дня, см. CONSTRUCTOR_CARRYOVER_DAYS),
  *   а в dishes — только блюда, доступные хотя бы в одну из дат
  * - city: город (cities.title) — от его даты старта считается неделя цикла;
  *   по умолчанию первый город
  * Без dates — все блюда конструктора без привязки к датам (старые версии скрипта).
  */
 const MAX_CONSTRUCTOR_DATES = 31;
+
+// Блюда хранятся несколько дней: на дату продаём и меню стольких предыдущих дней (1 — вчерашнее)
+const CONSTRUCTOR_CARRYOVER_DAYS = 1;
 
 const parseConstructorDates = (value) => {
   if (!value) return null;
@@ -537,9 +541,9 @@ const getConstructorMenu = async (req, res) => {
       const menuResult = city ? await db.query(
         `SELECT day::DATE::TEXT AS date, m.dish_id
          FROM unnest($1::DATE[]) AS day
-         CROSS JOIN LATERAL constructor_menu_on(day::DATE, $2) m
+         CROSS JOIN LATERAL constructor_menu_with_carryover(day::DATE, $2, $3) m
          WHERE NOT m.removed`,
-        [dates, city.id]
+        [dates, city.id, CONSTRUCTOR_CARRYOVER_DAYS]
       ) : { rows: [] };
 
       availableByDate = new Map(dates.map(date => [date, new Set()]));
