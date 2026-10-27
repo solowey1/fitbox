@@ -9,9 +9,9 @@
  *
  * Скрипт подключён на всех страницах с корзиной, поэтому здесь же правило корзины
  * «каждый товар — на своей странице»:
- * - блюда «Собери своё меню» (артикул D<id>-<ГГГГММДД>) и их доставка (FBC-DELIVERY)
- *   оформляются только на странице конструктора;
- * - программы питания — только на остальных страницах (не в конструкторе).
+ * - блюда «Собери своё меню» (артикул D<id>-<ГГГГММДД>) оформляются только на странице конструктора;
+ * - программы питания — только на остальных страницах (не в конструкторе);
+ * - товар «Доставка» (FBC-DELIVERY) ведёт delivery-cost.js по товарам страницы — он свой везде.
  * Чужие для страницы товары в корзине полупрозрачные, заказ блокируется —
  * с предупреждением, ссылкой на нужную страницу и кнопкой «Убрать из корзины».
  */
@@ -51,7 +51,8 @@
     // каждый товар — на своей странице: блюда конструктора — в конструкторе, программы — вне его
     pageRules: {
       constructorPage: '#constructor.fbc',   // разметка конструктора
-      constructorSku: /^(?:D\d+(?:-\d{8})?|FBC-DELIVERY)$/i, // блюда конструктора и их доставка
+      constructorSku: /^D\d+(?:-\d{8})?$/i, // блюда конструктора
+      deliverySku: 'FBC-DELIVERY',           // доставка (delivery-cost.js) — своя на любой странице
       cartList: '.t706__cartwin-products, .t706__sidebar-products, .t706__cartpage-products',
       cartForm: '.t706 form',
       cartContinue: '.t706__sidebar-continue, .t706__cartpage-open-form',
@@ -285,7 +286,7 @@
 
     /** Товар нельзя оформить на этой странице */
     function isForeign(product) {
-      if (!product) return false;
+      if (!product || String(product.sku) === RULE.deliverySku) return false;
       var isConstructorItem = RULE.constructorSku.test(String(product.sku || ''));
       return isConstructorPage() ? !isConstructorItem : isConstructorItem;
     }
@@ -629,7 +630,7 @@
   scan();
 
   window.NCDM_DELIVERY_PICKER = {
-    VERSION: 'fitbox-1.2.0', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
+    VERSION: 'fitbox-1.3.0', // проверка в консоли: NCDM_DELIVERY_PICKER.VERSION
     CONFIG: CONFIG,
     scan: scan,
     updateSubmit: updateSubmit,
