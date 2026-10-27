@@ -7,13 +7,18 @@
  *
  * Надбавка зоны берётся из названия полигона: «Бесплатная зона доставки» — 0,
  * «Зона доставки + 200 рублей» — 200. Полигон без суммы в названии — ошибка.
+ * Цвет зоны — цвет заливки полигона: в разных городах одна надбавка бывает разного цвета.
  */
 const fs = require('fs');
 const path = require('path');
 
-// Карты по городам: ключ — значение поля «Город» в корзине
+// Карты по городам (блок с картой на главной каждого сайта): ключ — значение поля «Город» в корзине.
+// У Димитровграда карты зон нет.
 const MAPS = {
-  'Казань': 'constructor:dbe528f4a0a3d471f6091c4881f1759bfe066864daa3d61cac52a7957a3c8220'
+  'Ульяновск': 'constructor:2d01253bc37341a757796900d077150c1ddad97ae60820252c60dcf58a74fa80',
+  'Казань': 'constructor:dbe528f4a0a3d471f6091c4881f1759bfe066864daa3d61cac52a7957a3c8220',
+  'Самара': 'constructor:14004d1c20d1b275878bb0b52bca26e5412d82ca848c15ae89657b38fba4958e',
+  'Тольятти': 'constructor:f2718b1575e9d0b3d28eeea1782ebbbe7e5b53afc86e93dbbc13caa3f7d6fb8d'
 };
 
 const OUTPUT = path.join(__dirname, '../src/data/delivery-zones.json');
@@ -65,6 +70,8 @@ const run = async () => {
         title: feature.title,
         surcharge: surchargeFromTitle(feature.title),
         zIndex: feature.zIndex || 0,
+        // цвет заливки на карте: по нему в корзине подписывается зона («Желтая зона»)
+        color: ((feature.fill && feature.fill.color) || '').toLowerCase() || null,
         // [[долгота, широта], …] — внешний контур и дырки, как в GeoJSON
         polygon: feature.geometry.coordinates.map(ring => ring.map(([lon, lat]) => [round(lon), round(lat)]))
       }))

@@ -8,14 +8,14 @@
  * На день без доставки блюда привозят в ближайший предыдущий день доставки.
  *
  * Два режима:
- * - на странице есть #constructor — рисуем конструктор (только в городах из CONFIG.cities)
- *   и считаем доставку: товар «Доставка» в корзине, зона по адресу, строка «Доставка» над «Итого»;
+ * - на странице есть #constructor — рисуем конструктор (только в городах из CONFIG.cities);
  * - на любой странице — работаем с корзиной: группируем блюда конструктора по датам,
  *   блокируем заказ, если выбран город без конструктора или дата доставки уже недоступна.
  *
- * Даты доставки считает delivery-date.js (window.NCDM_DELIVERY); если его нет на странице,
- * скрипт подгружается сам. Программы питания в корзине на этой странице блокирует
- * delivery-datepicker.js (правило «каждый товар — на своей странице»).
+ * Даты доставки считает delivery-date.js (window.NCDM_DELIVERY), стоимость доставки —
+ * delivery-cost.js (window.FITBOX_DELIVERY: товар «Доставка», зона по адресу, строка над «Итого»);
+ * если их нет на странице, скрипты подгружаются сами. Программы питания в корзине на этой
+ * странице блокирует delivery-datepicker.js (правило «каждый товар — на своей странице»).
  *
  * Проверка в консоли: FITBOX_CONSTRUCTOR.VERSION, FITBOX_CONSTRUCTOR.debug()
  */
@@ -64,30 +64,8 @@
     //   в опциях товара в корзине и в подзаголовке страницы. false — временно скрыто
     showNutrition: false,
 
-    // ▼ Доставка конструктора: считается за каждый день доставки
-    delivery: {
-      price: 250,      // стоимость доставки за день, ₽
-      freeFrom: 1050,  // от этой суммы блюд за день доставки — бесплатно, ₽
-      sku: 'FBC-DELIVERY',
-      title: 'Доставка',
-      // надбавка за зону — за каждый день доставки, в том числе бесплатный
-      surchargePerDay: true,
-      // зоны с карты (бэкенд: GET /api/tilda/delivery-zone), ключ — надбавка, ₽
-      zones: {
-        0: { color: '#28AF0F', label: 'Зеленая зона (бесплатно)', short: 'Зеленая' },
-        150: { color: '#F9982F', label: 'Желтая зона (+150 ₽)', short: 'Желтая' },
-        200: { color: '#E7802F', label: 'Оранжевая зона (+200 ₽)', short: 'Оранжевая' },
-        250: { color: '#EE4F4D', label: 'Красная зона (+250 ₽)', short: 'Красная' }
-      },
-      zoneCities: ['Казань'], // где есть карта зон
-      addressFields: {
-        street: 'input[name="street"]',
-        house: 'input[name="house"]',
-        corpus: 'input[name="corpus"]'
-      },
-      zoneAfterField: 'input[name="floor"]', // поле зоны — под «Подъездом» и «Этажом»
-      zoneDelay: 900 // пауза после ввода адреса перед запросом зоны, мс
-    },
+    // Товар «Доставка» — его ведёт delivery-cost.js (там же цена, порог бесплатной доставки и зоны)
+    deliverySku: 'FBC-DELIVERY',
 
     // Цвета подписей о доставке
     colors: {
@@ -109,9 +87,7 @@
       delivery: 'Доставка',
       legacyDate: 'Дата доставки', // так называлась опция дня в старых корзинах
       weight: 'Вес',
-      nutrition: 'КБЖУ',
-      deliveryDays: 'Дни доставки',
-      zone: 'Зона'
+      nutrition: 'КБЖУ'
     },
 
     texts: {
@@ -140,15 +116,8 @@
       deliveryOn: 'Доставка ',
       toFree: 'До бесплатной доставки {sum}',
       freeDelivery: 'Бесплатная доставка',
-      free: 'бесплатно',
-      totalFree: 'Бесплатно',
-      zoneTitle: 'Зона доставки',
-      zoneIdle: 'Укажите улицу и дом — определим зону доставки',
-      zoneLoading: 'Определяем зону доставки…',
-      zoneApprox: 'Дом не нашли на карте, зона — по улице',
-      zoneOutside: 'Адрес вне зон доставки — стоимость уточнит менеджер',
-      zoneNotFound: 'Не нашли адрес на карте — проверьте улицу и дом',
-      zoneError: 'Не удалось определить зону — стоимость уточнит менеджер'
+      // сумма для бесплатной доставки набрана, но адрес в платной зоне
+      zoneOnly: 'Доставка {sum} — за зону'
     }
   };
 
@@ -247,28 +216,35 @@
   // ==================== ДАТЫ ДОСТАВКИ ====================
 
   /**
-   * Ядро расчёта дат — delivery-date.js. Обычно он уже подключён на сайте
-   * (календарь в корзине), иначе подгружаем его с того же сервера, что и API.
+   * Общие скрипты доставки обычно уже подключены на сайте (календарь и стоимость в корзине),
+   * иначе подгружаем их с того же сервера, что и API.
    */
-  let deliveryCorePromise = null;
+  const loaders = {};
 
-  const loadDeliveryCore = (apiBaseUrl) => {
-    if (window.NCDM_DELIVERY) return Promise.resolve(window.NCDM_DELIVERY);
-    if (deliveryCorePromise) return deliveryCorePromise;
+  const loadShared = (apiBaseUrl, file, globalName) => {
+    if (window[globalName]) return Promise.resolve(window[globalName]);
+    if (loaders[file]) return loaders[file];
 
-    deliveryCorePromise = new Promise((resolve, reject) => {
+    loaders[file] = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = `${new URL(apiBaseUrl).origin}/web/shared/delivery-date.js`;
-      script.onload = () => (window.NCDM_DELIVERY ? resolve(window.NCDM_DELIVERY) : reject(new Error('NCDM_DELIVERY не найден')));
+      script.src = `${new URL(apiBaseUrl).origin}/web/shared/${file}`;
+      script.onload = () => (window[globalName] ? resolve(window[globalName]) : reject(new Error(`${globalName} не найден`)));
       script.onerror = () => {
-        deliveryCorePromise = null;
-        reject(new Error('delivery-date.js не загрузился'));
+        loaders[file] = null;
+        reject(new Error(`${file} не загрузился`));
       };
       document.head.appendChild(script);
     });
 
-    return deliveryCorePromise;
+    return loaders[file];
   };
+
+  /** Ядро расчёта дат */
+  const loadDeliveryCore = apiBaseUrl => loadShared(apiBaseUrl, 'delivery-date.js', 'NCDM_DELIVERY');
+
+  /** Стоимость доставки — после ядра дат: без него она не считается */
+  const loadDeliveryCost = apiBaseUrl => loadDeliveryCore(apiBaseUrl)
+    .then(() => loadShared(apiBaseUrl, 'delivery-cost.js', 'FITBOX_DELIVERY'));
 
   /**
    * Дни в блоке «Выберите день»: все дни подряд, начиная с ближайшего дня доставки.
@@ -349,8 +325,8 @@
    */
   const isInCart = product => product && product.deleted !== 'yes' && (parseInt(product.quantity, 10) || 0) > 0;
 
-  /** Товар «Доставка» — его ведёт сам скрипт (deliveryProduct) */
-  const isDeliveryProduct = product => !!product && String(product.sku) === CONFIG.delivery.sku;
+  /** Товар «Доставка» — его ведёт delivery-cost.js */
+  const isDeliveryProduct = product => !!product && String(product.sku) === CONFIG.deliverySku;
 
   /** Свои действия после функций корзины Тильды: она вызывает их по глобальному имени */
   const afterTildaCall = (name, callback) => {
@@ -532,60 +508,8 @@
 
   // ==================== ДОСТАВКА ====================
 
-  /**
-   * Доставка считается за каждый день доставки. Блюда дня без доставки едут
-   * в предыдущий день доставки и входят в его сумму. Сумма блюд дня доставки
-   * от CONFIG.delivery.freeFrom — доставка бесплатная, иначе CONFIG.delivery.price.
-   * Надбавка за зону (по адресу в корзине) — за каждый день доставки.
-   * Всё это — товар «Доставка» в корзине; ведёт его скрипт, только на странице конструктора.
-   */
-  const zone = {
-    status: 'idle', // idle | loading | found | outside | not_found | error
-    surcharge: 0,
-    precise: true,
-    key: '',
-    cache: new Map(), // адрес -> ответ API
-    timer: null
-  };
-
-  const zoneSurcharge = () => (zone.status === 'found' ? zone.surcharge : 0);
-
-  /** План доставки по корзине: дни доставки с суммами блюд и ценой, надбавка за зону, итог */
-  const deliveryPlan = (items, city) => {
-    const core = window.NCDM_DELIVERY;
-    const byDelivery = new Map();
-
-    if (core && isCityAllowed(city)) {
-      items.forEach((item) => {
-        const iso = deliveryDayFor(core, city, item.iso);
-        if (!iso) return; // день уже недоступен — такой заказ всё равно заблокирован
-        if (!byDelivery.has(iso)) byDelivery.set(iso, { iso, menuDays: [], sum: 0 });
-        const day = byDelivery.get(iso);
-        if (day.menuDays.indexOf(item.iso) === -1) day.menuDays.push(item.iso);
-        day.sum += (parseFloat(item.product.price) || 0) * item.quantity;
-      });
-    }
-
-    const { price, freeFrom, surchargePerDay } = CONFIG.delivery;
-    const days = Array.from(byDelivery.values())
-      .sort((a, b) => a.iso.localeCompare(b.iso))
-      .map(day => ({
-        ...day,
-        menuDays: day.menuDays.sort(),
-        cost: day.sum >= freeFrom ? 0 : price,
-        left: Math.max(0, freeFrom - day.sum)
-      }));
-
-    const surcharge = days.length ? zoneSurcharge() : 0;
-    const surchargeTotal = surchargePerDay ? surcharge * days.length : surcharge;
-
-    return {
-      days,
-      byIso: new Map(days.map(day => [day.iso, day])),
-      surcharge,
-      total: days.reduce((sum, day) => sum + day.cost, 0) + surchargeTotal
-    };
-  };
+  /** План доставки по корзине — у delivery-cost.js; пока он не загрузился — null */
+  const deliveryPlan = () => (window.FITBOX_DELIVERY ? window.FITBOX_DELIVERY.plan() : null);
 
   // ---------- подписи «Доставка 1 ноября», «До бесплатной доставки …» ----------
 
@@ -599,259 +523,20 @@
     return note;
   };
 
+  /** До порога — сколько осталось; порог набран — бесплатно или только надбавка за зону */
   const freeDeliveryNote = (day) => {
-    const free = day.cost === 0;
-    const note = el('div', `fbc-delivery-note ${free ? 'is-free' : 'is-need'}`);
-    const text = free ? CONFIG.texts.freeDelivery : CONFIG.texts.toFree.replace('{sum}', formatPrice(day.left));
+    let status = 'is-need';
+    let text = CONFIG.texts.toFree.replace('{sum}', formatPrice(day.left));
+    if (day.base === 0) {
+      status = day.cost === 0 ? 'is-free' : 'is-zone';
+      text = day.cost === 0 ? CONFIG.texts.freeDelivery : CONFIG.texts.zoneOnly.replace('{sum}', formatPrice(day.cost));
+    }
+    const note = el('div', `fbc-delivery-note ${status}`);
     note.append(truckIcon(), el('span', 'fbc-delivery-note-text', text));
     return note;
   };
 
-  // ---------- товар «Доставка» ----------
-
-  const deliveryProduct = {
-    options(plan) {
-      const days = plan.days
-        .map(day => `${formatDayMonth(day.iso)} — ${day.cost ? formatPrice(day.cost) : CONFIG.texts.free}`)
-        .join(', ');
-      const options = [{ option: CONFIG.optionLabels.deliveryDays, variant: days }];
-
-      if (plan.surcharge) {
-        const info = CONFIG.delivery.zones[plan.surcharge];
-        const count = plan.days.length;
-        const times = CONFIG.delivery.surchargePerDay && count > 1
-          ? ` × ${count} ${plural(count, 'день', 'дня', 'дней')}`
-          : '';
-        options.push({
-          option: CONFIG.optionLabels.zone,
-          variant: `${info ? `${info.short}, ` : ''}+${formatPrice(plan.surcharge)}${times}`
-        });
-      }
-      return options;
-    },
-
-    /** Привести товар «Доставка» к плану. Если ничего не поменялось, корзину не трогаем (иначе — цикл) */
-    sync() {
-      if (!state.root || !cart.isReady()) return;
-
-      const plan = deliveryPlan(cart.constructorItems(), getCartCity());
-      const products = cart.products();
-      const index = products.findIndex(isDeliveryProduct);
-
-      if (plan.total <= 0) {
-        if (index !== -1) {
-          products.splice(index, 1);
-          cart.commit();
-        }
-        return;
-      }
-
-      const next = {
-        name: CONFIG.delivery.title,
-        price: plan.total,
-        quantity: 1,
-        amount: plan.total,
-        sku: CONFIG.delivery.sku,
-        img: '',
-        options: this.options(plan)
-      };
-
-      const current = products[index];
-      if (current && current.deleted !== 'yes' && Number(current.price) === next.price
-        && parseInt(current.quantity, 10) === 1 && JSON.stringify(current.options) === JSON.stringify(next.options)) {
-        return;
-      }
-
-      // не через tcart__addProduct: та покажет «Товар добавлен» и откроет корзину
-      if (current) {
-        Object.assign(current, next);
-        delete current.deleted;
-      } else {
-        products.push({ ...next, ts: Math.floor(Date.now() / 1000) });
-      }
-      cart.commit();
-    }
-  };
-
-  // ---------- строка «Доставка» над «Итого» ----------
-
-  const totalRow = {
-    render() {
-      const items = state.root ? cart.constructorItems() : [];
-      const plan = items.length ? deliveryPlan(items, getCartCity()) : null;
-      const showPrice = value => (typeof window.tcart__showPrice === 'function'
-        ? window.tcart__showPrice(value, 'acceptzero')
-        : formatPrice(value));
-
-      document.querySelectorAll('.t706__cartwin-totalamount-list').forEach((list) => {
-        let row = list.querySelector('.fbc-total-delivery');
-        const total = list.querySelector('.t706__cartwin-totalamount-row_total');
-        if (!plan || !plan.days.length || !total) {
-          if (row) row.remove();
-          return;
-        }
-
-        if (!row) {
-          // разметка — как у строк Тильды (скидка, доставка), чтобы взять их стили
-          row = el('div', 't706__cartwin-totalamount-row fbc-total-delivery');
-          const label = el('div', 't706__cartwin-totalamount-info_label');
-          label.append(el('span', 't706__cartwin-totalamount-info_label-text', CONFIG.delivery.title));
-          row.append(label, el('div', 't706__cartwin-totalamount-info_value'));
-        }
-        // цену форматирует сама Тильда (валюта проекта), текст «Бесплатно» — наш
-        const value = row.querySelector('.t706__cartwin-totalamount-info_value');
-        if (plan.total) value.innerHTML = showPrice(plan.total);
-        else value.textContent = CONFIG.texts.totalFree;
-
-        if (row.nextElementSibling !== total) list.insertBefore(row, total);
-        if (typeof window.tcart__markFlexTotalsRowBeforeTotal === 'function') {
-          window.tcart__markFlexTotalsRowBeforeTotal(list.parentNode);
-        }
-      });
-    }
-  };
-
-  // ---------- зона доставки по адресу ----------
-
-  const zoneField = {
-    form: () => document.querySelector(CONFIG.cartFormSelector),
-
-    address(form) {
-      const value = selector => ((form.querySelector(selector) || {}).value || '').trim();
-      const fields = CONFIG.delivery.addressFields;
-      return { street: value(fields.street), house: value(fields.house), corpus: value(fields.corpus) };
-    },
-
-    isZoneCity: city => CONFIG.delivery.zoneCities.indexOf(city) !== -1,
-
-    /**
-     * Поле «Зона доставки» под «Подъездом» и «Этажом». Класс t-input-group не ставим:
-     * по таким блокам Тильда (и restoreFormFields в delivery-datepicker.js) судит о полях формы
-     */
-    ensure(form) {
-      const input = form.querySelector(CONFIG.delivery.zoneAfterField);
-      const anchor = input && (input.closest('.t-input-group') || input);
-      if (!anchor) return null;
-
-      let group = form.querySelector('.fbc-zone-group');
-      if (!group) {
-        group = el('div', 'fbc-zone-group');
-        const row = el('div', 'fbc-zone t-text');
-        row.append(el('span', 'fbc-zone-swatch'), el('span', 'fbc-zone-text'));
-        group.append(el('div', 'fbc-zone-title t-input-title t-descr t-descr_md', CONFIG.texts.zoneTitle),
-          row, el('div', 'fbc-zone-hint t-text'));
-      }
-      if (group.previousElementSibling !== anchor) anchor.parentNode.insertBefore(group, anchor.nextSibling);
-      return { group, anchor };
-    },
-
-    render() {
-      const form = this.form();
-      if (!form) return;
-
-      const show = !!state.root && this.isZoneCity(getCartCity()) && cart.constructorItems().length > 0;
-      if (!show) {
-        const existing = form.querySelector('.fbc-zone-group');
-        if (existing) existing.hidden = true;
-        return;
-      }
-
-      const parts = this.ensure(form);
-      if (!parts) return;
-      const { group, anchor } = parts;
-      // Тильда спрятала поля формы (например, заказ только после входа) — прячем и зону
-      group.hidden = anchor.style.display === 'none';
-
-      const info = zone.status === 'found' ? CONFIG.delivery.zones[zone.surcharge] : null;
-      const texts = {
-        idle: CONFIG.texts.zoneIdle,
-        loading: CONFIG.texts.zoneLoading,
-        found: info ? info.label : `+${formatPrice(zone.surcharge)}`,
-        outside: CONFIG.texts.zoneOutside,
-        not_found: CONFIG.texts.zoneNotFound,
-        error: CONFIG.texts.zoneError
-      };
-
-      group.setAttribute('data-status', zone.status);
-      group.querySelector('.fbc-zone-swatch').style.backgroundColor = info ? info.color : '';
-      group.querySelector('.fbc-zone-text').textContent = texts[zone.status] || '';
-      const hint = group.querySelector('.fbc-zone-hint');
-      hint.textContent = zone.status === 'found' && !zone.precise ? CONFIG.texts.zoneApprox : '';
-      hint.hidden = !hint.textContent;
-    },
-
-    set(status, surcharge, precise) {
-      zone.status = status;
-      zone.surcharge = surcharge || 0;
-      zone.precise = precise !== false;
-      this.render();
-      deliveryProduct.sync();
-      totalRow.render();
-    },
-
-    apply(data) {
-      const statuses = { found: 'found', outside: 'outside', not_found: 'not_found', no_zones: 'idle' };
-      this.set(statuses[data.status] || 'error', data.surcharge, data.precise);
-    },
-
-    /** Запрос зоны по адресу из формы; один и тот же адрес не запрашиваем дважды */
-    lookup() {
-      const form = this.form();
-      if (!form || !state.root) return;
-
-      const city = getCartCity();
-      const address = this.address(form);
-      if (!this.isZoneCity(city) || !address.street || !address.house) {
-        zone.key = '';
-        if (zone.status !== 'idle') this.set('idle');
-        else this.render();
-        return;
-      }
-
-      const key = [city, address.street, address.house, address.corpus].join('|').toLowerCase();
-      if (key === zone.key && zone.status !== 'error') return;
-      zone.key = key;
-
-      if (zone.cache.has(key)) {
-        this.apply(zone.cache.get(key));
-        return;
-      }
-
-      this.set('loading');
-      const query = new URLSearchParams({ city, ...address });
-      fetch(`${getApiBase()}/tilda/delivery-zone?${query}`, { headers: { Accept: 'application/json' } })
-        .then(response => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
-        .then((data) => {
-          zone.cache.set(key, data);
-          if (zone.key === key) this.apply(data);
-        })
-        .catch((error) => {
-          console.warn('[constructor] зона доставки не определилась', error);
-          if (zone.key === key) this.set('error');
-        });
-    },
-
-    schedule() {
-      clearTimeout(zone.timer);
-      zone.timer = setTimeout(() => this.lookup(), CONFIG.delivery.zoneDelay);
-    },
-
-    init() {
-      const fields = CONFIG.delivery.addressFields;
-      const selector = [fields.street, fields.house, fields.corpus].join(', ');
-      ['input', 'change'].forEach((type) => {
-        document.addEventListener(type, (event) => {
-          if (!event.target.matches) return;
-          if (event.target.matches(selector)) this.schedule();
-          else if (event.target.matches(CONFIG.citySelector)) this.lookup();
-        }, true);
-      });
-      // адрес могли подставить браузер или Тильда — без событий ввода
-      setTimeout(() => this.lookup(), 1500);
-    }
-  };
-
-  /** Стили подписей о доставке, поля зоны и товара «Доставка» — цвета из CONFIG.colors */
+  /** Стили подписей о доставке — цвета из CONFIG.colors */
   const injectDeliveryStyles = () => {
     if (document.getElementById('fbc-delivery-styles')) return;
     const c = CONFIG.colors;
@@ -864,26 +549,12 @@
       '.fbc-delivery-note-date{font-weight:700;}',
       `.fbc-delivery-note.is-need{color:${c.need};}`,
       `.fbc-delivery-note.is-free{color:${c.free};}`,
+      `.fbc-delivery-note.is-zone{color:${c.text};}`,
       // под выбором дня в конструкторе
       '.fbc-days-delivery{margin-top:12px;}',
       '.fbc-days-delivery .fbc-delivery-note{font-size:14px;}',
       // под датой в корзине
-      '.fbc-cart-date .fbc-delivery-note{flex-basis:100%;margin-top:4px;}',
-      // поле «Зона доставки» в форме корзины
-      '.fbc-zone-group{clear:both;width:100%;box-sizing:border-box;margin-bottom:25px;}',
-      '.fbc-zone-group .fbc-zone-title{padding-bottom:5px;}',
-      '.fbc-zone{display:flex;align-items:center;gap:10px;font-size:15px;line-height:1.35;}',
-      '.fbc-zone-swatch{flex:none;width:18px;height:18px;border-radius:4px;background:#e6e6e6;}',
-      '.fbc-zone-group[data-status="loading"] .fbc-zone-swatch{animation:fbc-zone-pulse 1s ease-in-out infinite;}',
-      '.fbc-zone-group:not([data-status="found"]) .fbc-zone-text{opacity:.6;}',
-      '.fbc-zone-hint{margin-top:4px;font-size:12px;line-height:1.4;opacity:.6;}',
-      '@keyframes fbc-zone-pulse{50%{opacity:.4;}}',
-      // товар «Доставка»: количество и удаление ведёт скрипт
-      '.t706__product.fbc-cart-delivery-row .t706__product-plusminus,',
-      '.t706__product.fbc-cart-delivery-row .t706__product-del{visibility:hidden;pointer-events:none;}',
-      '.t706__product.fbc-cart-delivery-row .t706__product-imgdiv{display:flex;align-items:center;',
-      `justify-content:center;color:${c.text};background-color:#f5f5f5;}`,
-      '.t706__product.fbc-cart-delivery-row .t706__product-imgdiv .fbc-truck{width:45%;height:45%;}'
+      '.fbc-cart-date .fbc-delivery-note{flex-basis:100%;margin-top:4px;}'
     ].join('');
     document.head.appendChild(style);
   };
@@ -897,7 +568,7 @@
    * В строке блюда прячем артикул, день и дату доставки (они в заголовке), вес остаётся,
    * КБЖУ — если не скрыто (CONFIG.showNutrition; так и у товаров, добавленных раньше).
    * Под датой — «Доставка 1 ноября» (если в этот день не возим) и «До бесплатной доставки …»
-   * у первой даты каждого дня доставки. Товар «Доставка» — в конце списка.
+   * у первой даты каждого дня доставки. Товар «Доставка» (скрыт) — в конце списка, его ведёт delivery-cost.js.
    */
   const cartView = {
     injectStyles() {
@@ -935,25 +606,18 @@
       // что уже нельзя заказать: пометки у блюд, кнопки у дат, предупреждение сверху
       const { unavailable } = findUnavailable(cart.constructorItems(), city, () => refreshCart());
       const unavailableSkus = new Set(unavailable.map(item => String(item.product.sku)));
-      const plan = deliveryPlan(cart.constructorItems(), city);
+      const plan = deliveryPlan();
 
       document.querySelectorAll(CONFIG.cartListSelector).forEach((list) => {
         list.querySelectorAll('.fbc-cart-date, .fbc-cart-warning, .fbc-cart-row-note').forEach(node => node.remove());
 
         const rows = Array.prototype.filter.call(list.children, row => row.classList.contains('t706__product'));
         const others = [];
-        const deliveryRows = [];
         const groups = new Map();
 
         rows.forEach((row) => {
           const product = products[parseInt(row.getAttribute('data-cart-product-i'), 10)];
-          if (isDeliveryProduct(product)) {
-            row.classList.add('fbc-cart-delivery-row');
-            const image = row.querySelector('.t706__product-imgdiv');
-            if (image && !image.querySelector('.fbc-truck')) image.append(truckIcon());
-            deliveryRows.push(row);
-            return;
-          }
+          if (isDeliveryProduct(product)) return;
 
           const parsed = product && parseSku(product.sku);
           if (!parsed || !parsed.iso) {
@@ -978,10 +642,7 @@
           groups.get(parsed.iso).push(row);
         });
 
-        if (!groups.size) {
-          deliveryRows.forEach(row => list.appendChild(row));
-          return;
-        }
+        if (!groups.size) return;
 
         this.injectStyles();
 
@@ -1014,7 +675,7 @@
           const deliveryIso = dayUnavailable.length === dayItems.length ? null : deliveryDayFor(core, city, iso);
           if (deliveryIso) {
             if (deliveryIso !== iso) header.append(deliveryOnNote(iso, deliveryIso));
-            const day = plan.byIso.get(deliveryIso);
+            const day = plan && plan.byIso.get(deliveryIso);
             // у дня доставки одна сумма на все его дни меню — показываем её под первым из них
             if (day && day.menuDays[0] === iso) header.append(freeDeliveryNote(day));
           }
@@ -1022,11 +683,10 @@
           list.appendChild(header);
           groups.get(iso).forEach(row => list.appendChild(row));
         });
-
-        deliveryRows.forEach(row => list.appendChild(row));
       });
 
-      totalRow.render();
+      // товар «Доставка» с заголовком — снова в конец списка
+      if (window.FITBOX_DELIVERY) window.FITBOX_DELIVERY.decorateCart();
     },
 
     init() {
@@ -1936,7 +1596,6 @@
     renderMenu();
     // ядро дат и меню могли загрузиться только сейчас
     cartGuard.check();
-    deliveryProduct.sync();
     cartView.decorate();
   }
 
@@ -1958,8 +1617,15 @@
 
     state.imageObserver = initImageObserver();
     injectDeliveryStyles();
-    zoneField.init();
     start();
+
+    // стоимость доставки: подписи в корзине пересчитываются вместе с ней (зона, дата, товары)
+    loadDeliveryCost(apiUrl())
+      .then((delivery) => {
+        delivery.onUpdate(() => cartView.decorate());
+        delivery.update();
+      })
+      .catch(error => console.error('[constructor]', error));
 
     // наступление отсечки на открытой странице: ближайший день ушёл, добавился новый —
     // загружаем меню заново (выбранный день сохранится, если он ещё доступен)
@@ -1967,7 +1633,6 @@
       if (!window.NCDM_DELIVERY || !state.days.length) return;
       const days = getMenuDays(window.NCDM_DELIVERY, state.city);
       if (days.join() !== state.days.join()) start();
-      else deliveryProduct.sync();
     }, 60000);
   };
 
@@ -1978,25 +1643,18 @@
     cart.onChange(() => {
       syncWithCart();
       cartGuard.check();
-      deliveryProduct.sync();
-      zoneField.render();
     });
     cartView.init();
     cartGuard.init();
     initConstructor();
 
-    // строку «Доставка» над «Итого» Тильда стирает при каждом пересчёте суммы
-    afterTildaCall('tcart__reDrawTotal', () => totalRow.render());
-    // другой город — другие правила доставки и зоны
+    // другой город — другие правила доставки
     document.addEventListener('change', (event) => {
-      if (event.target.matches && event.target.matches(CONFIG.citySelector)) {
-        deliveryProduct.sync();
-        cartView.decorate();
-      }
+      if (event.target.matches && event.target.matches(CONFIG.citySelector)) cartView.decorate();
     }, true);
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.4.0',
+      VERSION: 'fitbox-1.5.0',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
@@ -2007,8 +1665,7 @@
         days: state.days,
         selectedDay: state.selectedDay,
         inCart: cart.constructorItems().map(item => `${item.product.sku} × ${item.quantity}`),
-        delivery: deliveryPlan(cart.constructorItems(), getCartCity()),
-        zone: { ...zone, cache: zone.cache.size }
+        delivery: window.FITBOX_DELIVERY ? window.FITBOX_DELIVERY.debug() : 'delivery-cost.js не загружен'
       })
     };
   };
