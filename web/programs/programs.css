@@ -9,7 +9,8 @@
 }
 
 @media screen and (max-width: 960px) {
-    #rec1935240641,
+    /* блок T123 с разметкой программ — без привязки к номеру блока */
+    .t-rec:has(#menu),
     .uc-menu {
         position: relative;
         z-index: 9999;
@@ -394,9 +395,8 @@
 .week-select-wrapper {
     position: absolute;
     top: var(--l);
-    z-index: 60;
+    z-index: 101; /* над рядом кнопок программ (z-index: 100): поле выбора заходит под него */
     justify-self: flex-end;
-    padding-right: var(--s);
 }
 
 .week-select-wrapper::after {
@@ -415,9 +415,14 @@
 }
 
 .week-select {
+    /* область нажатия больше текста: поля вокруг, а отрицательные отступы
+       оставляют текст и стрелку на прежнем месте */
+    padding: var(--s) calc(var(--s) * 2) var(--s) var(--s);
+    margin: calc(var(--s) * -1);
     color: var(--dark);
     background-color: transparent;
     border: none;
+    cursor: pointer;
     -moz-appearance: none;
     -webkit-appearance: none;
     appearance: none;
