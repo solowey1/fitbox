@@ -536,7 +536,7 @@
     return note;
   };
 
-  /** Стили подписей о доставке — цвета из CONFIG.colors */
+  /** Стили подписей о доставке (цвета из CONFIG.colors) и подписей кнопок дней */
   const injectDeliveryStyles = () => {
     if (document.getElementById('fbc-delivery-styles')) return;
     const c = CONFIG.colors;
@@ -554,7 +554,11 @@
       '.fbc-days-delivery{margin-top:12px;}',
       '.fbc-days-delivery .fbc-delivery-note{font-size:14px;}',
       // под датой в корзине
-      '.fbc-cart-date .fbc-delivery-note{flex-basis:100%;margin-top:4px;}'
+      '.fbc-cart-date .fbc-delivery-note{flex-basis:100%;margin-top:4px;}',
+      // кнопки дней: полные названия на десктопе, короткие — до 960 px (сетка Тильды).
+      // Здесь, а не в constructor.css: стили страницы вставлены в блок на Тильде
+      '.fbc-day .fbc-day-short{display:none;}',
+      '@media screen and (max-width:960px){.fbc-day .fbc-day-long{display:none;}.fbc-day .fbc-day-short{display:inline;}}'
     ].join('');
     document.head.appendChild(style);
   };
@@ -1310,9 +1314,19 @@
       chip.setAttribute('aria-pressed', String(isActive));
       chip.setAttribute('aria-label', formatDayLong(iso));
 
+      // «Четверг» / «29 октября» на десктопе, «Чт» / «29 окт» — на вертикальном планшете и уже
+      const variants = (className, long, short) => {
+        const node = el('span', className);
+        node.append(el('span', 'fbc-day-long', long), el('span', 'fbc-day-short', short));
+        return node;
+      };
       chip.append(
-        el('span', 'fbc-day-weekday', capitalize(formatDate(iso, { weekday: 'short' }))),
-        el('span', 'fbc-day-date', formatDate(iso, { day: 'numeric', month: 'short' }).replace('.', ''))
+        variants('fbc-day-weekday',
+          capitalize(formatDate(iso, { weekday: 'long' })),
+          capitalize(formatDate(iso, { weekday: 'short' }))),
+        variants('fbc-day-date',
+          formatDayMonth(iso),
+          formatDate(iso, { day: 'numeric', month: 'short' }).replace('.', ''))
       );
       const count = counts.get(iso) || 0;
       if (count) chip.append(el('span', 'fbc-day-count', String(count)));
@@ -1654,7 +1668,7 @@
     }, true);
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.5.0',
+      VERSION: 'fitbox-1.5.1',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
