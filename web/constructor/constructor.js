@@ -558,7 +558,13 @@
       // кнопки дней: полные названия на десктопе, короткие — до 960 px (сетка Тильды).
       // Здесь, а не в constructor.css: стили страницы вставлены в блок на Тильде
       '.fbc-day .fbc-day-short{display:none;}',
-      '@media screen and (max-width:960px){.fbc-day .fbc-day-long{display:none;}.fbc-day .fbc-day-short{display:inline;}}'
+      '@media screen and (max-width:960px){.fbc-day .fbc-day-long{display:none;}.fbc-day .fbc-day-short{display:inline;}}',
+      // полные названия: больше полей по бокам и одинаковая ширина — по самой широкой кнопке
+      // (--fbc-day-width считает equalizeDays). Поля — чтобы 7 кнопок помещались в ряд
+      // в контейнере Тильды: 940 px до 1200 px, 1160 px шире. Селектор с .fbc-day-list —
+      // сильнее .fbc-day из стилей страницы (блок на Тильде стоит ниже этих стилей)
+      '@media screen and (min-width:961px){.fbc-day-list .fbc-day{width:var(--fbc-day-width,auto);padding-left:18px;padding-right:18px;}}',
+      '@media screen and (min-width:1201px){.fbc-day-list .fbc-day{padding-left:24px;padding-right:24px;}}'
     ].join('');
     document.head.appendChild(style);
   };
@@ -1302,6 +1308,18 @@
     return counts;
   }, new Map());
 
+  /**
+   * Одинаковая ширина кнопок дней — по самой широкой (на десктопе, см. стили кнопок).
+   * Меряем без заданной ширины; не помещаются в ряд — переносятся, как раньше
+   */
+  const equalizeDays = () => {
+    const list = ui.dayList;
+    if (!list) return;
+    list.style.removeProperty('--fbc-day-width');
+    const widths = Array.from(list.querySelectorAll('.fbc-day'), chip => chip.getBoundingClientRect().width);
+    if (widths.length) list.style.setProperty('--fbc-day-width', `${Math.ceil(Math.max(...widths))}px`);
+  };
+
   const renderDays = () => {
     ui.dayList.textContent = '';
     const counts = dayCounts();
@@ -1347,6 +1365,7 @@
       ui.dayList.append(chip);
     });
 
+    equalizeDays();
     renderDayDelivery();
 
     // блюда в корзине на дни, которые уже не успеваем доставить,
@@ -1551,6 +1570,14 @@
     ui.daysDelivery = days.querySelector('.fbc-days-delivery');
     ui.daysNote = days.querySelector('.fbc-days-note');
 
+    // ширина кнопок дней зависит от шрифта (Inter грузится позже) и от ширины экрана
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(equalizeDays);
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(equalizeDays, 150);
+    });
+
     ui.barButton.addEventListener('click', () => cart.open());
   };
 
@@ -1668,7 +1695,7 @@
     }, true);
 
     window.FITBOX_CONSTRUCTOR = {
-      VERSION: 'fitbox-1.5.1',
+      VERSION: 'fitbox-1.5.2',
       CONFIG,
       reload: () => state.root && start(),
       debug: () => ({
