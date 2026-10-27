@@ -22,24 +22,6 @@ const webHeaders = (res, filePath) => {
 };
 app.use('/web', express.static('web', { setHeaders: webHeaders }));
 
-// Старые адреса /scripts/*.js — пока на Тильде не заменили код блоков и HEAD.
-// Отдаём только эти файлы: серверные скрипты из scripts/ наружу не видны.
-const legacyScripts = {
-  'constructor.js': 'web/constructor/constructor.js',
-  'delivery-date.js': 'web/shared/delivery-date.js',
-  'delivery-datepicker.js': 'web/shared/delivery-datepicker.js',
-  'delivery-cutoff-tester.js': 'web/dev/delivery-cutoff-tester.js',
-  'tilda.js': 'web/programs/programs.js',
-  'tilda-old.js': 'web/legacy/tilda-old.js'
-};
-app.get('/scripts/:file', (req, res, next) => {
-  const file = legacyScripts[req.params.file];
-  if (!file) return next();
-  res.sendFile(file, { root: __dirname, headers: { 'Cache-Control': 'public, max-age=3600' } }, (error) => {
-    if (error) next(error);
-  });
-});
-
 // Routes
 app.use('/api/cities', require('./src/routes/cities'));
 app.use('/api/programs', require('./src/routes/nutritionPrograms'));
