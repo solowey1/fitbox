@@ -9,7 +9,8 @@ const { geocode } = require('../services/geocoder');
  * обновляются скриптом scripts/update-delivery-zones.js). Надбавка зоны — surcharge, ₽.
  *
  * Ответ:
- * - { status: 'found', surcharge, zone, point, address } — адрес в зоне доставки;
+ * - { status: 'found', surcharge, zone, color, point, address } — адрес в зоне доставки
+ *   (color — цвет зоны на карте города, по нему корзина подписывает зону);
  * - { status: 'outside', point, address } — адрес найден, но вне зон;
  * - { status: 'not_found' } — геокодер адрес не нашёл;
  * - { status: 'no_zones' } — для города зоны не заданы.
@@ -62,6 +63,7 @@ const getDeliveryZone = async (req, res) => {
       city,
       surcharge: zone.surcharge,
       zone: zone.title,
+      color: zone.color,
       point,
       address: place.address,
       precise: place.precise
