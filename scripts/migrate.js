@@ -11,7 +11,7 @@ require('dotenv').config();
  * BEGIN/COMMIT внутри самих .sql файлов не нужны.
  *
  * Параметры:
- *   --baseline=009  отметить миграции с номером <= 009 как применённые, не выполняя их.
+ *   --baseline=004  отметить миграции с номером <= 004 как применённые, не выполняя их.
  *                   Нужно один раз для существующей БД, где миграции применялись вручную.
  *   --dry-run       только показать, какие миграции будут применены
  */
@@ -30,7 +30,7 @@ const getArg = (name) => {
   return arg.includes('=') ? arg.split('=')[1] : true;
 };
 
-// Номер миграции из имени файла: 009_add_... -> 9
+// Номер миграции из имени файла: 004_constructor.sql -> 4
 const getMigrationNumber = (file) => parseInt(file.split('_')[0], 10);
 
 async function runMigrations() {
@@ -74,13 +74,13 @@ async function runMigrations() {
     const applied = new Set(appliedResult.rows.map(row => row.filename));
 
     // Защита: если БД уже заполнена, а учёт миграций пуст — старые миграции
-    // нельзя выполнять повторно (007 и 009 не идемпотентны)
+    // нельзя выполнять повторно (002_seed_data.sql не идемпотентна)
     if (applied.size === 0) {
       const existing = await client.query(`SELECT to_regclass('public.dishes') AS dishes`);
       if (existing.rows[0].dishes) {
         throw new Error(
           'В БД уже есть таблицы, но schema_migrations пуста. ' +
-          'Укажите, какие миграции уже применены, например: --baseline=009'
+          'Укажите, какие миграции уже применены, например: --baseline=004'
         );
       }
     }

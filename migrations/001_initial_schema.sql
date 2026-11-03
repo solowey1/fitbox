@@ -1,4 +1,6 @@
--- Создание таблиц для проекта Fitbox
+-- Схема БД Fitbox: города, программы питания, цены, блюда, ингредиенты, заказы.
+-- Конструктор «Собери своё меню» (приёмы пищи, цикл меню, поля блюд и заказов) — в 004_constructor.sql.
+-- Транзакцию открывает scripts/migrate.js, BEGIN/COMMIT здесь не нужны.
 
 -- Таблица городов
 CREATE TABLE IF NOT EXISTS cities (
@@ -18,6 +20,7 @@ CREATE TABLE IF NOT EXISTS nutrition_programs (
     description TEXT, -- Описание программы
     slogan VARCHAR(255), -- Слоган программы
     data JSONB NOT NULL, -- { calories_from, calories_to, proteins, fats, carbohydrates }
+    portion_coefficient DECIMAL(4, 2) NOT NULL DEFAULT 1.0, -- множитель порции: 1.0 = стандарт, >1.0 = увеличенные порции
     sort INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -37,11 +40,13 @@ CREATE TABLE IF NOT EXISTS city_nutrition_programs (
 CREATE TABLE IF NOT EXISTS prices (
     id SERIAL PRIMARY KEY,
     nutrition_program_id INTEGER NOT NULL REFERENCES nutrition_programs(id) ON DELETE CASCADE,
+    city_id INTEGER NOT NULL REFERENCES cities(id) ON DELETE CASCADE, -- цена программы зависит от города
     days INTEGER NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     old_price DECIMAL(10, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT prices_unique_program_city_days UNIQUE (nutrition_program_id, city_id, days)
 );
 
 -- Таблица блюд
@@ -49,6 +54,7 @@ CREATE TABLE IF NOT EXISTS dishes (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     image VARCHAR(255) NOT NULL,
+    in_program BOOLEAN NOT NULL DEFAULT TRUE, -- FALSE = черновик: блюдо скрыто из меню программ и КБЖУ
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -65,15 +71,16 @@ CREATE TABLE IF NOT EXISTS ingredients (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Связь блюд и ингредиентов с количеством
+-- Связь блюд и ингредиентов с количеством.
+-- Без UNIQUE (dish_id, ingredient_id): Budibase при редактировании ингредиентов блюда
+-- ловит duplicate key.
 CREATE TABLE IF NOT EXISTS dish_ingredients (
     id SERIAL PRIMARY KEY,
     dish_id INTEGER NOT NULL REFERENCES dishes(id) ON DELETE CASCADE,
     ingredient_id INTEGER NOT NULL REFERENCES ingredients(id) ON DELETE CASCADE,
     quantity DECIMAL(10, 2), -- количество в граммах (nullable для совместимости с Budibase)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(dish_id, ingredient_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Связь программ питания, дней недели и блюд
@@ -177,3 +184,8 @@ CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXE
 
 DROP TRIGGER IF EXISTS update_order_items_updated_at ON order_items;
 CREATE TRIGGER update_order_items_updated_at BEFORE UPDATE ON order_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON COLUMN nutrition_programs.portion_coefficient IS
+'Множитель порции: 1.0 = стандарт, >1.0 = увеличенные порции';
+COMMENT ON COLUMN dishes.in_program IS
+'Блюдо используется в программах питания. Снятый флаг = черновик: блюдо скрыто из меню программ, даже если есть в nutrition_program_dishes';
