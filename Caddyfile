@@ -1,0 +1,22 @@
+# Домен берётся из переменной APP_DOMAIN (см. .env / docker-compose.yml).
+# Сертификат Let's Encrypt выпускается и продлевается автоматически.
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy node-app:3000 {
+		# Приложение отвечает на /health — не отправляем трафик на неживой контейнер
+		health_uri /health
+		health_interval 30s
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
