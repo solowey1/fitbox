@@ -31,8 +31,11 @@
 
   // ==================== НАСТРОЙКИ ====================
 
+  // Домен сервера (Caddy, APP_DOMAIN в .env). При смене домена меняется только здесь.
+  const APP_ORIGIN = 'https://fitbox.solowey.ru';
+
   const CONFIG = {
-    apiBaseUrl: 'https://app.fitbox.su/api', // можно переопределить: <div id="constructor" data-api="...">
+    apiBaseUrl: `${APP_ORIGIN}/api`, // можно переопределить: <div id="constructor" data-api="...">
 
     // Где работает конструктор — значения поля «Город» в корзине
     cities: ['Казань'],
