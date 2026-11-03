@@ -1,7 +1,9 @@
 // ====================
 // КОНФИГУРАЦИЯ API
 // ====================
-const API_BASE_URL = 'https://app.fitbox.su/api';
+// Домен сервера (Caddy, APP_DOMAIN в .env). При смене домена меняется только здесь.
+const APP_ORIGIN = 'https://fitbox.solowey.ru';
+const API_BASE_URL = `${APP_ORIGIN}/api`;
 
 // Стандартные настройки при загрузке страницы (выбранные программа и количество дней)
 const defaultSettings = {
