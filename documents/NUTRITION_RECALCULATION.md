@@ -199,7 +199,7 @@ npm install
 Перед первым использованием примените SQL миграцию:
 
 ```bash
-psql -U $DB_USER -d $DB_NAME -f migrations/004_recalculate_nutrition_function.sql
+psql -U $DB_USER -d $DB_NAME -f migrations/003_nutrition_recalculation.sql
 ```
 
 Или через скрипт миграции (если есть):
@@ -249,7 +249,7 @@ SELECT * FROM recalculate_program_nutrition();
 ```
 backend/
 ├── migrations/
-│   └── 004_recalculate_nutrition_function.sql  # SQL функция
+│   └── 003_nutrition_recalculation.sql  # SQL функция
 ├── scripts/
 │   └── recalculate-nutrition.js                # Скрипт пересчета
 ├── src/
