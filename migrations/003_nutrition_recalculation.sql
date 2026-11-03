@@ -1,5 +1,6 @@
--- Функция для пересчета питательности программ на основе ингредиентов блюд
--- Вызывается вручную через API или автоматически через cron
+-- Функция пересчёта питательности программ на основе ингредиентов блюд.
+-- Вызывается вручную через API или автоматически через cron.
+-- Блюда-черновики (dishes.in_program = FALSE) в пересчёте не участвуют.
 
 CREATE OR REPLACE FUNCTION recalculate_program_nutrition()
 RETURNS TABLE(
@@ -84,6 +85,7 @@ BEGIN
       FROM nutrition_program_dishes npd
       JOIN dishes d ON d.id = npd.dish_id
       WHERE npd.nutrition_program_id = program_record.id
+        AND d.in_program
       GROUP BY npd.day_of_week, npd.week_number
     ) daily_stats;
 
