@@ -10,6 +10,7 @@
  *   NCDM_DELIVERY.isDateAllowed('Казань', date)    -> boolean
  *   NCDM_DELIVERY.isBeforeCutoff('Казань')         -> boolean
  *   NCDM_DELIVERY.getSelectedCity(form)            -> 'Казань' | null
+ *   NCDM_DELIVERY.getKind()                        -> 'constructor' | 'programs' (по странице)
  *   NCDM_DELIVERY.debugCity()                      -> что скрипт видит в форме
  *   NCDM_DELIVERY.debugTable()                     -> таблица дат по всем дням недели
  */
@@ -33,6 +34,21 @@
       overrides: {}         // особые правила, например: { '5:after': { nextWeekday: 2 } } —
                             // пятница после 14:00 -> ближайший вторник; или { plusDays: 4 }
     },
+
+    /**
+     * Правила по виду заказа — поверх defaults, под правилами города.
+     * Вид определяется страницей: есть constructorSelector — «конструктор», иначе — «программы».
+     *   конструктор — заказ за 2 дня до 14:00, после 14:00 — за 3 дня
+     *                 (среда до 14:00 -> пятница, позже -> воскресенье);
+     *   программы   — заказ накануне до 14:00, после 14:00 — за 2 дня
+     *                 (четверг до 14:00 и среда в любое время -> пятница).
+     */
+    kinds: {
+      constructor: { beforeCutoff: 2, afterCutoff: 3 },
+      programs: { beforeCutoff: 1, afterCutoff: 2 }
+    },
+
+    constructorSelector: '#constructor.fbc',   // разметка страницы конструктора
 
     // Ключ — значение поля «Город» в корзине (select[name="city"])
     cities: {
@@ -60,13 +76,21 @@
 
   // ==================== НАСТРОЙКИ ГОРОДА ====================
 
-  /** Общие правила + правила города. */
-  function getCityConfig(city) {
+  /** Вид заказа на этой странице: 'constructor' или 'programs'. */
+  function getKind() {
+    return document.querySelector(CONFIG.constructorSelector) ? 'constructor' : 'programs';
+  }
+
+  /** Общие правила + правила вида заказа + правила города. */
+  function getCityConfig(city, kind) {
     var own = CONFIG.cities[city] || {};
+    var byKind = CONFIG.kinds[kind || getKind()] || {};
     var result = {};
 
     for (var key in CONFIG.defaults) {
-      result[key] = own[key] !== undefined ? own[key] : CONFIG.defaults[key];
+      if (own[key] !== undefined) result[key] = own[key];
+      else if (byKind[key] !== undefined) result[key] = byKind[key];
+      else result[key] = CONFIG.defaults[key];
     }
 
     return result;
@@ -196,6 +220,7 @@
       'Поле города': select ? (select.value || '(пусто)') : 'не найдено',
       'Поддомен': getCityFromSubdomain() || '—',
       'Город': city || 'не определён',
+      'Вид заказа': getKind(),
       'Есть в настройках': city ? !!CONFIG.cities[city] : false,
       'Правила': city ? JSON.stringify(getCityConfig(city)) : '—'
     };
@@ -232,6 +257,7 @@
   window.NCDM_DELIVERY = {
     CONFIG: CONFIG,
     getCityConfig: getCityConfig,
+    getKind: getKind,
     getNow: getNow,
     isBeforeCutoff: isBeforeCutoff,
     getMinDeliveryDate: getMinDeliveryDate,
