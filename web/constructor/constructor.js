@@ -80,7 +80,9 @@
 
     skuPrefix: 'D',
     menuCacheMinutes: 5, // как долго помнить меню по датам для проверки корзины (на сервере кэш тоже 5 минут)
-    allLabel: 'Все',
+    allLabel: 'Все блюда',
+    showChipPrice: false, // «от N ₽ / блюдо» на кнопках приёмов (цены сейчас одинаковые — скрыто)
+    chipMaxWidth: 220,    // кнопки приёмов растягиваются на всю ширину ряда, но не шире (px)
 
     // Фото на кнопках «Выберите приемы»: вырезанные из фона блюда 3:2 (тень — CSS).
     // slug приёма пищи -> ссылка; приёма нет в списке — кнопка без фото.
@@ -1438,7 +1440,7 @@
         const text = cards ? `${count} ${plural(count, 'блюдо', 'блюда', 'блюд')}` : String(count);
         chip.append(el('span', 'fbc-chip-count', text));
       }
-      if (cards && minPrice) chip.append(el('span', 'fbc-chip-price', `от ${formatPrice(minPrice)} / блюдо`));
+      if (cards && CONFIG.showChipPrice && minPrice) chip.append(el('span', 'fbc-chip-price', `от ${formatPrice(minPrice)} / блюдо`));
       chip.addEventListener('click', onClick);
       return chip;
     };
@@ -1453,6 +1455,9 @@
     let hasImages = !!CONFIG.allImage;
 
     const dishes = dishesForDay(state.selectedDay);
+    // «Все блюда» — число блюд за день, как у остальных кнопок
+    const allCount = el('span', 'fbc-chip-count', `${dishes.length} ${plural(dishes.length, 'блюдо', 'блюда', 'блюд')}`);
+    if (cards && dishes.length) allChip.append(allCount);
     state.mealTypes.forEach((type) => {
       const ofType = dishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1);
       const count = ofType.length;
@@ -1472,6 +1477,45 @@
     });
     // фото выезжают за верх кнопки — ряду нужен отступ сверху
     ui.chips.classList.toggle('fbc-chips--media', hasImages);
+    fitChips();
+  };
+
+  /**
+   * Ширина кнопок приёмов: делим ширину ряда поровну, чтобы кнопки заняли её всю.
+   * Ниже предела по тексту не сжимаем — название не должно переноситься или вылезать за поля:
+   * тогда ряд прокручивается. Размер фото считается от ширины кнопки (CSS, --fbc-chip-w).
+   * На телефоне (≤ 640 px) ширина фиксирована в CSS.
+   */
+  const fitChips = () => {
+    const row = ui.chips;
+    if (!row || !row.classList.contains('fbc-chips--media')) return;
+    row.style.removeProperty('--fbc-chip-w');
+    if (window.matchMedia('(max-width: 640px)').matches) return;
+
+    const cards = Array.from(row.children);
+    if (!cards.length) return;
+    const rowStyle = getComputedStyle(row);
+    const gap = parseFloat(rowStyle.columnGap) || 0;
+    const available = row.clientWidth - parseFloat(rowStyle.paddingLeft) - parseFloat(rowStyle.paddingRight);
+
+    // минимум по тексту: самая длинная строка кнопки + поля
+    const canvas = fitChips.canvas || (fitChips.canvas = document.createElement('canvas'));
+    const ctx = canvas.getContext('2d');
+    let minWidth = 0;
+    cards.forEach((card) => {
+      const cardStyle = getComputedStyle(card);
+      const frame = parseFloat(cardStyle.paddingLeft) + parseFloat(cardStyle.paddingRight) +
+        parseFloat(cardStyle.borderLeftWidth) + parseFloat(cardStyle.borderRightWidth);
+      Array.from(card.children).forEach((node) => {
+        if (node.tagName === 'IMG') return;
+        ctx.font = getComputedStyle(node).font;
+        minWidth = Math.max(minWidth, ctx.measureText(node.textContent).width + frame + 6); // 6 px — запас на шрифт
+      });
+    });
+
+    const share = (available - gap * (cards.length - 1)) / cards.length;
+    const width = Math.min(CONFIG.chipMaxWidth, Math.max(minWidth, share));
+    row.style.setProperty('--fbc-chip-w', `${width.toFixed(2)}px`);
   };
 
   const renderSections = () => {
@@ -1619,8 +1663,11 @@
     let resizeTimer = null;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(equalizeDays, 150);
+      resizeTimer = setTimeout(() => { equalizeDays(); fitChips(); }, 150);
     });
+
+    // шрифт Inter приходит позже разметки — подгоняем ширину кнопок ещё раз, когда он загрузится
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitChips);
 
     ui.barButton.addEventListener('click', () => cart.open());
   };
