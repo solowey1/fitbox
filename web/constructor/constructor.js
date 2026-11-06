@@ -1461,12 +1461,14 @@
       const minPrice = prices.length ? Math.min(...prices) : 0;
       const image = CONFIG.mealImages[type.slug] || '';
       if (image) hasImages = true;
-      ui.chips.append(makeChip(type.title, count, state.selectedTypes.has(type.slug), () => {
+      const chip = makeChip(type.title, count, state.selectedTypes.has(type.slug), () => {
         if (state.selectedTypes.has(type.slug)) state.selectedTypes.delete(type.slug);
         else state.selectedTypes.add(type.slug);
         renderChips();
         applyFilter();
-      }, image, minPrice));
+      }, image, minPrice);
+      chip.setAttribute('data-type', type.slug); // размер фото подгоняется под блюдо в CSS
+      ui.chips.append(chip);
     });
     // фото выезжают за верх кнопки — ряду нужен отступ сверху
     ui.chips.classList.toggle('fbc-chips--media', hasImages);
