@@ -147,13 +147,13 @@
   opacity: .6;
 }
 
-/* Кнопки приёмов — карточки; у приёмов с фото оно у верхней грани и чуть выезжает за неё.
-   Фото блюд — на белом фоне: brightness добивает почти белый фон до чисто белого,
-   multiply «растворяет» его на фоне кнопки */
+/* Кнопки приёмов — карточки; у приёмов с фото оно у верхней грани и выезжает за неё.
+   Фото — вырезанные из фона блюда 3:2 (поля сверху 10 %, снизу 7 %), тень рисует CSS */
 .fbc-chips--media {
-  --fbc-chip-w: 150px;
-  --fbc-chip-img: 112px;
-  --fbc-chip-lift: 30px; /* на сколько фото выезжает за верх кнопки */
+  --fbc-chip-w: 184px;
+  --fbc-chip-img-w: calc(var(--fbc-chip-w) - 20px);       /* фото занимает ширину кнопки минус по 10 px по бокам */
+  --fbc-chip-img-h: calc(var(--fbc-chip-img-w) * 2 / 3);
+  --fbc-chip-lift: 24px; /* на сколько само блюдо выезжает за верх кнопки */
   align-items: stretch;
   padding-top: var(--fbc-chip-lift);
   row-gap: calc(var(--fbc-chip-lift) + var(--s));
@@ -172,20 +172,19 @@
   text-align: left;
 }
 
+/* под блюдом (оно занимает 83 % высоты фото) остаётся место для подписей */
 .fbc-chip--media {
-  padding-top: calc(var(--fbc-chip-img) - var(--fbc-chip-lift) + 4px);
+  padding-top: calc(var(--fbc-chip-img-h) * .83 - var(--fbc-chip-lift) + 8px);
 }
 
 .fbc-chip-image {
   position: absolute;
-  top: calc(var(--fbc-chip-lift) * -1);
-  left: 50%;
-  width: var(--fbc-chip-img);
-  height: var(--fbc-chip-img);
-  margin-left: calc(var(--fbc-chip-img) / -2);
+  top: calc(var(--fbc-chip-img-h) * -.1 - var(--fbc-chip-lift));
+  left: 10px;
+  width: var(--fbc-chip-img-w);
+  height: var(--fbc-chip-img-h);
   object-fit: contain;
-  filter: brightness(1.08);
-  mix-blend-mode: multiply;
+  filter: drop-shadow(0 6px 5px rgba(0, 0, 0, .16));
   pointer-events: none;
 }
 
@@ -196,14 +195,21 @@
 }
 
 .fbc-chip--card .fbc-chip-count {
-  font-size: 13px;
-  line-height: 16px;
+  font-size: 12px;
+  line-height: 15px;
   color: var(--grey-3);
   opacity: 1;
 }
 
-/* «Все» — карточка меньшей ширины */
-.fbc-chip--card.fbc-chip--all {
+.fbc-chip-price {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--green);
+}
+
+/* «Все» без фото — карточка меньшей ширины */
+.fbc-chip--card.fbc-chip--all:not(.fbc-chip--media) {
   width: auto;
   min-width: 72px;
 }
@@ -919,13 +925,14 @@
   }
 
   .fbc-chips--media {
-    --fbc-chip-w: 124px;
-    --fbc-chip-img: 92px;
-    --fbc-chip-lift: 24px;
+    --fbc-chip-w: 148px;
+    --fbc-chip-img-w: calc(var(--fbc-chip-w) - 14px);
+    --fbc-chip-lift: 18px;
+    padding-top: var(--fbc-chip-lift); /* перекрывает padding: 0 … 4px у .fbc-chips */
   }
 
-  .fbc-chips--media {
-    padding-top: var(--fbc-chip-lift); /* перекрывает padding: 0 … 4px у .fbc-chips */
+  .fbc-chip-image {
+    left: 7px;
   }
 
   .fbc-chip--card {
@@ -934,7 +941,7 @@
   }
 
   .fbc-chip--media {
-    padding-top: calc(var(--fbc-chip-img) - var(--fbc-chip-lift) + 4px);
+    padding-top: calc(var(--fbc-chip-img-h) * .83 - var(--fbc-chip-lift) + 6px);
   }
 
   .fbc-chip--card .fbc-chip-label {
@@ -943,6 +950,10 @@
   }
 
   .fbc-chip--card .fbc-chip-count {
+    font-size: 11px;
+  }
+
+  .fbc-chip-price {
     font-size: 12px;
   }
 

@@ -37,6 +37,7 @@ INSERT INTO meal_types (slug, title, sort) VALUES
     ('salad', 'Салаты', 30),
     ('soup', 'Супы', 40),
     ('main', 'Вторые блюда', 50),
+    ('large', 'Большие порции', 55),
     ('dessert', 'Десерты', 60),
     ('drink', 'Напитки', 70)
 ON CONFLICT (slug) DO NOTHING;
