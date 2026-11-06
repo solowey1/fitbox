@@ -505,14 +505,14 @@ INSERT INTO dishes (id, title, image) VALUES
 (1, 'Творожная запеканка с малиной и йогурт', 'https://static.tildacdn.com/tild3262-3561-4563-a332-356561636635/000010______.png'),
 (2, 'Рулет с творогом и яблоками', 'https://static.tildacdn.com/tild3030-6361-4964-b839-323033396539/000020_____.png'),
 (3, 'Томатный суп с креветками', 'https://static.tildacdn.com/tild3934-3234-4138-b937-386431366334/noroot.png'),
-(4, 'Чикенболлы с соусом «Тропикана» с рисом по-мексикански', 'https://static.tildacdn.com/tild6537-3063-4161-a363-633564613536/000040_______-.png'),
-(5, 'Салат «Белоснежка»', 'https://static.tildacdn.com/tild3334-3965-4563-b964-373166656463/000050___1.jpg'),
+(4, 'Чикенболлы с соусом тропикана и рисом по-мексикански', 'https://static.tildacdn.com/tild6537-3063-4161-a363-633564613536/000040_______-.png'),
+(5, 'Салат Белоснежка', 'https://static.tildacdn.com/tild3334-3965-4563-b964-373166656463/000050___1.jpg'),
 (6, 'Творожная шарлотка с фруктами и йогуртом', 'https://static.tildacdn.com/tild3533-3965-4436-b237-303435613365/000060______.png'),
 (7, 'Рисовый блинчик с клубничным творогом', 'https://static.tildacdn.com/tild6637-3962-4361-b266-326234663134/000070_____.png'),
 (8, 'Куриная грудка с грибами и пенне', 'https://static.tildacdn.com/tild3462-3439-4161-b866-633731396565/000081_______1.jpg'),
 (9, 'Фрикадельки с мясным соусом и рисом басмати', 'https://static.tildacdn.com/tild3935-6466-4931-a464-363930626462/000090_______.png'),
 (10, 'Рулет с курицей, курагой и орехами', 'https://static.tildacdn.com/tild3538-3136-4234-a632-303339323338/000100_______1.jpg'),
-(11, 'ПП-шаурма на тарелке', 'https://static.tildacdn.com/tild3035-6234-4634-a162-643531656163/noroot.png'),
+(11, 'Шаурма на тарелке', 'https://static.tildacdn.com/tild3035-6234-4634-a162-643531656163/noroot.png'),
 (12, 'Кекс с яблоками и изюмом', 'https://static.tildacdn.com/tild6164-3036-4130-b565-653734616134/000120_____.png'),
 (13, 'Оджахури с курицей', 'https://static.tildacdn.com/tild3039-3134-4838-b061-366664626466/000130___.png'),
 (14, 'Вок с курицей', 'https://static.tildacdn.com/tild6636-3662-4436-b664-666366613437/000140____1.jpg'),
@@ -525,13 +525,13 @@ INSERT INTO dishes (id, title, image) VALUES
 (21, 'Каша Дружба с изюмом', 'https://static.tildacdn.com/tild6237-3262-4139-a433-616461616636/000210____.png'),
 (22, 'Сырники с ягодным соусом', 'https://static.tildacdn.com/tild6661-3035-4335-b535-333934633432/000220____.png'),
 (23, 'Рулет с ветчиной в сливочном соусе и томатные спагетти', 'https://static.tildacdn.com/tild3465-6436-4464-a638-633566393461/000230.png'),
-(24, 'Кебабы куриные с бэби-картофелем и чесночным соусом', 'https://static.tildacdn.com/tild6538-6666-4334-b938-653664633263/noroot.png'),
-(25, 'Рыбная котлетка и салат из свеклы и апельсина', 'https://static.tildacdn.com/tild3034-3763-4565-a563-626430636534/000250_________1.jpg'),
+(24, 'Куриные кебабы с картофелем', 'https://static.tildacdn.com/tild6538-6666-4334-b938-653664633263/noroot.png'),
+(25, 'Рыбная котлета с салатом из печеной свеклы и апельсином', 'https://static.tildacdn.com/tild3034-3763-4565-a563-626430636534/000250_________1.jpg'),
 (26, 'Каша овсяная сливочная с малиной и пряностями', 'https://static.tildacdn.com/tild3130-6538-4630-b261-663534663161/000260_______.png'),
 (27, 'Онигири с курицей', 'https://static.tildacdn.com/tild6233-6561-4163-b039-386537323664/000270___.png'),
 (28, 'Мак-н-чиз с митболлами', 'https://static.tildacdn.com/tild6166-3337-4165-a139-343639333166/noroot.png'),
-(29, 'Рис-боул с креветками и кунжутным соусом', 'https://static.tildacdn.com/tild3330-3264-4235-b533-333133323935/Photo_0002_-_.jpg'),
-(30, 'Суп-пюре с брокколи и курицей', 'https://static.tildacdn.com/tild3435-3463-4535-b834-656336353736/000300_-____.png'),
+(29, 'Рис-боул с креветками и кунжутным соусом', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
+(30, 'Суп-пюре с брокколи и мясом и без', 'https://static.tildacdn.com/tild3435-3463-4535-b834-656336353736/000300_-____.png'),
 (31, 'Творожный крем с фруктами и мюсли', 'https://static.tildacdn.com/tild3133-6634-4464-a230-656363373166/000310______.png'),
 (32, 'Тарт тыквенный с ягодно-сметанным соусом', 'https://static.tildacdn.com/tild3261-3936-4632-b764-313266353831/noroot.png'),
 (33, 'Паприкаш и гречка с овощами', 'https://static.tildacdn.com/tild3564-6162-4961-b862-623431326130/000330_Paprikas_i_gr.jpg'),
@@ -542,64 +542,64 @@ INSERT INTO dishes (id, title, image) VALUES
 (38, 'Тефтели в перечном соусе с чечевичным пюре', 'https://static.tildacdn.com/tild3836-3765-4432-b930-646136626536/000380_Tefteli_v_per.png'),
 (39, 'Грибной крем-суп с шампиньонами и куриным филе', 'https://static.tildacdn.com/tild3639-6434-4233-a235-663534643438/000390_Gribnoj_krem-.png'),
 (40, 'Теплый салат с картофелем и маслинами', 'https://static.tildacdn.com/tild3864-6263-4338-a661-643831336666/000400_Teplyj_salat_.jpg'),
-(41, 'Сэндвич-ролл с горбушей и яйцом', 'https://static.tildacdn.com/tild3435-3133-4636-b135-616461306635/000410_Sendvic-roll_.jpg'),
+(41, 'Сэндвич-ролл с горбушей', 'https://static.tildacdn.com/tild3435-3133-4636-b135-616461306635/000410_Sendvic-roll_.jpg'),
 (42, 'Запеканка с брокколи и цветной капустой', 'https://static.tildacdn.com/tild3862-6532-4238-a164-653464386361/000420_Zapekanka_s_b.jpg'),
-(43, 'Фрикадельки с овощами по-итальянски со спагетти', 'https://static.tildacdn.com/tild6665-3531-4536-b964-373264616632/000430_Frikadel_ki_s.png'),
+(43, 'Фрикадельки с овощами по-итальянски и спагетти', 'https://static.tildacdn.com/tild6665-3531-4536-b964-373264616632/000430_Frikadel_ki_s.png'),
 (44, 'Рамен с курицей', 'https://static.tildacdn.com/tild3861-3465-4432-b130-363738343832/000440_Ramen_s_kuric.png'),
 (45, 'Картофельный салат с курицей', 'https://static.tildacdn.com/tild6638-3638-4337-b332-666464393361/000450_Kartofel_nyj_.png'),
-(46, 'Испанский боул', 'https://static.tildacdn.com/tild3064-6437-4331-a436-313734316363/noroot.png'),
+(46, '«Испанский» боул', 'https://static.tildacdn.com/tild3064-6437-4331-a436-313734316363/noroot.png'),
 (47, 'Конверт-ролл болоньезе', 'https://static.tildacdn.com/tild6462-6637-4237-b038-303261633133/000470_Konvert-roll_.png'),
-(48, 'Тропик киноа-боул с курицей под соусом "манго-чили"', 'https://static.tildacdn.com/tila6166-3733-4566-b863-336532396439/bowl_s_kinoa_mango_c.jpg'),
+(48, 'Тропик киноа-боул с курицей под соусом манго-чили', 'https://static.tildacdn.com/tila6166-3733-4566-b863-336532396439/bowl_s_kinoa_mango_c.jpg'),
 (49, 'Говядина в соусе барбекю и рисом по-мексикански', 'https://static.tildacdn.com/tild3830-3962-4534-b466-353565363364/000490_Govadina_v_so.png'),
 (50, 'Свекольный салат с фетой', 'https://static.tildacdn.com/tild3366-6262-4933-a362-346465343062/000252_________3.png'),
-(51, 'Боул "Деревенский"', 'https://static.tildacdn.com/tild3136-3537-4733-a132-313766313034/noroot.png'),
+(51, 'Боул «Деревенский» с картофелем, грибами и яйцом', 'https://static.tildacdn.com/tild3136-3537-4733-a132-313766313034/noroot.png'),
 (52, 'Турецкая лепешка с сыром', 'https://static.tildacdn.com/tild6237-3131-4365-a439-633062386662/000520_Tureckaa_lepe.png'),
 (53, 'Митлов в грибном соусе с гречкой', 'https://static.tildacdn.com/tild3263-6336-4961-a437-313835633932/000530_Mitlov_v_grib.png'),
-(54, 'Котлеты по-татарски с пюре, соусом из катыка и пажитником', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
+(54, 'Котлеты по-татарски с пажитником, соусом из катыка и картофельным пюре', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
 (55, 'Цезарь с курицей', 'https://static.tildacdn.com/tila3562-6663-4435-b738-316139383234/026.png'),
 (56, 'Кукурузная полента на сливках с тыквой и яблоками', 'https://static.tildacdn.com/tild6631-3039-4434-b638-323262613066/000560_Kukuruznaa_po.png'),
 (57, 'Американский сэндвич', 'https://static.tildacdn.com/tild3736-3533-4330-b939-633434616331/000570_Amerikanskij_.png'),
 (58, 'Цыпленок карри с ананасами и суши-рисом', 'https://static.tildacdn.com/tild6634-3065-4461-a335-393165323662/000580_Cyplenok_karr.png'),
-(59, 'Котлета с соусом «Болоньезе» и картофельным пюре', 'https://static.tildacdn.com/tild6463-6636-4537-a538-333036393664/000590_Kotleta_s_sou.png'),
-(60, 'Кето-курица в сырной шапке, морковью-мини, кабачком и перцем', 'https://static.tildacdn.com/tila3831-3666-4562-b831-656161616564/keto_kuritsa.jpg'),
+(59, 'Котлета с соусом болоньезе и картофельным пюре', 'https://static.tildacdn.com/tild6463-6636-4537-a538-333036393664/000590_Kotleta_s_sou.png'),
+(60, 'Кето-курица в сырной шапке с морковью мини, кабачком и перцем', 'https://static.tildacdn.com/tila3831-3666-4562-b831-656161616564/keto_kuritsa.jpg'),
 (61, 'Овсяная каша на топленом молоке с фруктовым топпингом', 'https://static.tildacdn.com/tild3431-6530-4530-a637-613530663133/000610_Ovsanaa_kasa_.png'),
 (62, 'Шоколадные маффины с апельсиновым джемом', 'https://static.tildacdn.com/tild6263-6538-4335-b534-613130663132/000620_Sokoladnye_ma.png'),
 (63, 'Сырный крем-суп с фрикадельками', 'https://static.tildacdn.com/tild6633-3634-4039-b939-633335353466/000630_Syrnyj_krem-s.png'),
 (64, 'Курица с опятами и картофельное пюре', 'https://static.tildacdn.com/tild3865-3233-4265-b066-313837353233/000640_Kurica_s_opat.png'),
 (65, 'Люля-кебаб в соусе с пармезаном', 'https://static.tildacdn.com/tild3163-3738-4562-b238-353630653630/000650_Lula-kebab_v_.jpg'),
-(66, 'Овсянка с шоколадом  и ягодным конфитюром', 'https://static.tildacdn.com/tild6137-6634-4339-b164-653533333731/000660_Ovsanka_s_sok.png'),
+(66, 'Овсянка с шоколадом и ягодным конфитюром', 'https://static.tildacdn.com/tild6137-6634-4339-b164-653533333731/000660_Ovsanka_s_sok.png'),
 (67, 'Даниш с заварным кремом и фруктами', 'https://static.tildacdn.com/tild6666-6233-4333-b665-333231343463/000670_Danis_s_zavar.png'),
 (68, 'Паэлья с куриным бедром и овощами', 'https://static.tildacdn.com/tild6662-6462-4461-b065-333735343365/noroot.png'),
-(69, 'Курочка в соусе чили-апельсин и кус-кус с овощами', 'https://static.tildacdn.com/tild3635-3965-4233-b762-353132366230/000480_Kurocka_v_sou.png'),
-(70, 'Паровая котлета с моцареллой с брокколи', 'https://static.tildacdn.com/tild6637-3334-4462-a461-333863346565/000700_Parovaa_kotle.jpg'),
+(69, 'Курочка с апельсиново-имбирным соусом и кус-кус с овощами', 'https://static.tildacdn.com/tild3635-3965-4233-b762-353132366230/000480_Kurocka_v_sou.png'),
+(70, 'Паровая котлета и моцарелла с брокколи', 'https://static.tildacdn.com/tild6637-3334-4462-a461-333863346565/000700_Parovaa_kotle.jpg'),
 (71, 'Рис по-тайски с яйцом', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
 (72, 'Апельсиновый кекс', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
 (73, 'Азу с гречкой', 'https://static.tildacdn.com/tild6231-6564-4135-b264-383562663230/000730_Azu_s_greckoj.png'),
 (74, 'Чечевичный суп с куриными фрикадельками', 'https://static.tildacdn.com/tild3366-3637-4739-a231-626236663438/000740_Cecevicnyj_su.png'),
 (75, 'Творожная паста с тостом из злакового хлеба и томатами', 'https://static.tildacdn.com/tild3265-3039-4263-a664-363961306365/000750_Tvoroznaa_pas.png'),
 (76, 'Рисовая каша с ягодным соусом', 'https://static.tildacdn.com/tild3431-6530-4530-a637-613530663133/000610_Ovsanaa_kasa_.png'),
-(77, 'Штрудель с овощами и курицей', 'https://static.tildacdn.com/tild6462-6637-4237-b038-303261633133/000470_Konvert-roll_.png'),
+(77, 'Штрудель с курицей и овощами', 'https://static.tildacdn.com/tild6462-6637-4237-b038-303261633133/000470_Konvert-roll_.png'),
 (78, 'Паста болоньезе', 'https://static.tildacdn.com/tild3465-6436-4464-a638-633566393461/000230.png'),
-(79, 'Куриное филе с соусом "чак-чак" и рисом жасмин', 'https://static.tildacdn.com/tild3431-3438-4139-b832-303638386565/noroot.png'),
+(79, 'Куриное филе с чак-чак соусом и рисом жасмин', 'https://static.tildacdn.com/tild3431-3438-4139-b832-303638386565/noroot.png'),
 (80, 'Греческий салат', 'https://static.tildacdn.com/tila3239-3235-4335-b532-303634653631/025.png'),
-(81, 'Курица су-вид с овощами гриль и соусом "Айвар"', 'https://static.tildacdn.com/tild3361-3734-4434-a633-626339396237/noroot.png'),
-(82, 'Сэндвич-ролл цезарь', 'https://static.tildacdn.com/tild6130-6161-4532-b139-663364363439/000110______.png'),
+(81, 'Курица су-вид с овощами-гриль и соусом «Айвар»', 'https://static.tildacdn.com/tild3361-3734-4434-a633-626339396237/noroot.png'),
+(82, 'Сэндвич-ролл Цезарь', 'https://static.tildacdn.com/tild6130-6161-4532-b139-663364363439/000110______.png'),
 (83, 'Курица терияки на рисе с овощами', 'https://static.tildacdn.com/tild3936-3465-4136-b337-633366656161/000830_Kurica_teriak.jpg'),
 (84, 'Средиземноморский боул с курицей и булгуром', 'https://static.tildacdn.com/tila3865-3733-4639-b637-656466343732/sredizemnomorskiy_bo.jpg'),
-(85, 'Салат «Грин энерджи»', 'https://static.tildacdn.com/tild6361-3933-4630-a135-323735363337/000850_Salat_Grin_en.jpg'),
+(85, 'Салат Грин энерджи', 'https://static.tildacdn.com/tild6361-3933-4630-a135-323735363337/000850_Salat_Grin_en.jpg'),
 (86, 'Творожная запеканка с грушей и ягодами', 'https://static.tildacdn.com/tild6335-6462-4562-a136-633038363965/000860_Tvoroznaa_zap.png'),
-(87, 'Кесадилья с говядиной', 'https://static.tildacdn.com/tild6666-3962-4531-a636-396430393865/000870_Kesadil_a_s_g.png'),
+(87, 'Кесадилья болоньезе', 'https://static.tildacdn.com/tild6666-3962-4531-a636-396430393865/000870_Kesadil_a_s_g.png'),
 (88, 'Цыпленок в кисло-сладком соусе и соба', 'https://static.tildacdn.com/tild6362-3064-4535-b461-653030306265/000880_Cyplenok_v_ki.jpg'),
 (89, 'Тыквенный крем-суп с гренками', 'https://static.tildacdn.com/tild6438-6533-4231-a535-653764343562/000890_Tykvennyj_kre.png'),
 (90, 'Вечерний боул с яйцом и фетой', 'https://static.tildacdn.com/tild3638-3738-4439-b734-353161623930/000900_Vecernij_boul.jpg'),
 (91, 'Фриттата с брокколи и курицей', 'https://static.tildacdn.com/tild3831-6166-4132-b834-363162376133/000910_Frittata_s_br.png'),
-(92, 'Творожный крем с грушево-анансовым конфитюром', 'https://static.tildacdn.com/tild3463-3633-4438-b834-633063633731/000920_Tvoroznyj_kre.png'),
+(92, 'Творожный крем с грушево-ананасовым конфитюром', 'https://static.tildacdn.com/tild3463-3633-4438-b834-633063633731/000920_Tvoroznyj_kre.png'),
 (93, 'Куриная котлета в сырном соусе и гречка', 'https://static.tildacdn.com/tild6436-3238-4963-a465-626261326164/000930_Kurinaa_kotle.png'),
 (94, 'Тушеная говядина с курагой, черносливом и кус-кус с овощами', 'https://static.tildacdn.com/tild6264-6435-4634-a662-373162363133/noroot.png'),
-(95, 'Кабачок запеченный с ветчиной и сыром', 'https://static.tildacdn.com/tild3938-6263-4434-b334-373431396330/000950_Kabacok_zapec.jpg'),
+(95, 'Печеные кабачки с сыром и ветчиной', 'https://static.tildacdn.com/tild3938-6263-4434-b334-373431396330/000950_Kabacok_zapec.jpg'),
 (96, 'Мультизлаковая каша с грушей и кокосом', 'https://static.tildacdn.com/tild6538-6231-4166-b566-316335613838/000960_Mul_tizlakova.png'),
 (97, 'Творожный пирог с ягодой', 'https://static.tildacdn.com/tild3762-3665-4964-a263-653835373761/000970_Tvoroznyj_pir.jpg'),
-(98, 'Паста с песто и курицей в соусе «Бешамель»', 'https://static.tildacdn.com/tila3063-3763-4765-a466-376339633738/019.png'),
+(98, 'Паста с песто и курицей в соусе бешамель', 'https://static.tildacdn.com/tila3063-3763-4765-a466-376339633738/019.png'),
 (99, 'Рис по-испански с цыпленком в перечном соусе', 'https://static.tildacdn.com/tild3162-6130-4939-a461-386232366631/000990_Ris_po-ispans.png'),
 (100, 'Ленивые голубцы в овощном соусе', 'https://static.tildacdn.com/tild3464-3631-4530-b737-316362323164/001000_Lenivye_golub.jpg'),
 (101, 'Каша пшённая с курагой и орехами', 'https://static.tildacdn.com/tild6538-6231-4166-b566-316335613838/000960_Mul_tizlakova.png'),
@@ -615,31 +615,31 @@ INSERT INTO dishes (id, title, image) VALUES
 (111, 'Рисовая каша с кусочками ананаса', 'https://static.tildacdn.com/tild3765-6663-4665-b938-646237356637/001110_Risovaa_kasa_.png'),
 (112, 'Онигири с говядиной', 'https://static.tildacdn.com/tild3962-3336-4532-a538-306239343434/001120_Onigiri_s_gov.png'),
 (113, 'Гречка с цыпленком по-азиатски', 'https://static.tildacdn.com/tild3263-3630-4931-a531-356232346631/001130_Grecka_s_cypl.png'),
-(114, 'Оладьи печеночные и спагетти с соусом «Бешамель»', 'https://static.tildacdn.com/tild3036-3738-4431-a535-323030376535/001140_Olad_i_peceno.png'),
+(114, 'Оладьи печеночные и спагетти с соусом бешамель', 'https://static.tildacdn.com/tild3036-3738-4431-a535-323030376535/001140_Olad_i_peceno.png'),
 (115, 'Летний салат с редисом и йогуртом', 'https://static.tildacdn.com/tild3736-3839-4763-b338-393935393564/001150_Letnij_salat_.png'),
 (116, 'Высокобелковая каша на кокосовом молоке', 'https://static.tildacdn.com/tila3636-3834-4665-b166-653833666134/vysokobelkovaya_kash.jpg'),
 (117, 'Творожная запеканка с шоколадной начинкой', 'https://static.tildacdn.com/tild3636-6462-4530-b738-393264376633/001170_Tvoroznaa_zap.png'),
 (118, 'Говядина Бургиньон с орзо', 'https://static.tildacdn.com/tild3837-3534-4964-b562-303138333462/001180_Govadina_Burg.png'),
-(119, 'Фобо с говядиной', 'https://static.tildacdn.com/tild3563-6230-4566-b966-646530383066/001190_Fobo_s_govadi.png'),
-(120, 'Котлеты из индейки с овощами и соусом «Паприка»', 'https://static.tildacdn.com/tild6462-6634-4335-b539-613762353031/001200_Kotlety_iz_in.png'),
+(119, 'Фо-бо с говядиной', 'https://static.tildacdn.com/tild3563-6230-4566-b966-646530383066/001190_Fobo_s_govadi.png'),
+(120, 'Котлеты из индейки с овощами и соусом паприка', 'https://static.tildacdn.com/tild6462-6634-4335-b539-613762353031/001200_Kotlety_iz_in.png'),
 (121, 'Гречка с грибами и белым соусом', 'https://static.tildacdn.com/tild3435-3163-4436-b764-653135333137/001210_Grecka_s_grib.png'),
 (122, 'Ванильно-яблочная шарлотка', 'https://static.tildacdn.com/tild6261-6237-4063-b630-363164343530/001220_Vanil_no-ablo.png'),
 (123, 'Тефтели с грибами и фузилли и зеленым соусом', 'https://static.tildacdn.com/tild3431-3164-4538-b437-653931363339/001230_Tefteli_s_gri.png'),
 (124, 'Борщ с говядиной', 'https://static.tildacdn.com/tild6134-3936-4635-b139-623465613863/001240_Bors_s_govadi.jpg'),
 (125, 'Поке с бедром цыпленка', 'https://static.tildacdn.com/tild6536-3935-4731-b930-653838366631/001250_Poke_s_bedrom.png'),
 (126, 'Овсяная каша с вареньем и орехами', 'https://static.tildacdn.com/tild6437-6436-4738-b237-383437623535/001260_Ovsanaa_kasa_.png'),
-(127, 'Чиабатта с курицей су-вид и соусом Песто', 'https://static.tildacdn.com/tild3565-3863-4639-a137-653336366165/noroot.png'),
-(128, 'Мясо по-французски с индейкой', 'https://static.tildacdn.com/tild3536-3335-4337-a464-373336343165/001280_Maso_po-franc.png'),
+(127, 'Чиабатта с курицей су-вид и соусом том-ям', 'https://static.tildacdn.com/tild3565-3863-4639-a137-653336366165/noroot.png'),
+(128, 'Мясо по французски с индейкой', 'https://static.tildacdn.com/tild3536-3335-4337-a464-373336343165/001280_Maso_po-franc.png'),
 (129, 'Удон с курицей в соусе «Том-ям»', 'https://static.tildacdn.com/tila6236-6162-4532-b338-633438323438/028.png'),
 (130, 'Оладьи из мяса курицы с овощами', 'https://static.tildacdn.com/tild3664-6634-4435-a636-326334623039/001300_Olad_i_iz_mas.png'),
 (131, 'Рисовая запеканка с горбушей', 'https://static.tildacdn.com/tild6537-3038-4334-b666-346136376436/001310_Risovaa_zapek.jpg'),
 (132, 'Гирос с курицей', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
-(133, 'Говядина томленая с черносливом и алтайской гречкой', 'https://static.tildacdn.com/tild3735-3035-4262-b361-316137386337/noroot.png'),
+(133, 'Говядина томленая с черносливом с алтайской гречкой', 'https://static.tildacdn.com/tild3735-3035-4262-b361-316137386337/noroot.png'),
 (134, 'Митболлы барбекю с фарфалле и базиликом', 'https://static.tildacdn.com/tild3765-6338-4262-a564-336431313262/001340_Mitbolly_barb.png'),
 (135, 'Котлета в сырном соусе со свеклой', 'https://static.tildacdn.com/tild6539-3262-4134-a235-633035663737/001350_Kotleta_v_syr.png'),
 (136, 'Шакшука классическая', 'https://static.tildacdn.com/tild3366-3937-4263-b431-363364626561/000031________2.png'),
 (137, 'Ванильные сырники с изюмом', 'https://static.tildacdn.com/tild3733-3266-4331-b631-316465316262/001370_Vanil_nye_syr.png'),
-(138, 'Рис с цыпленком «Унаги»', 'https://static.tildacdn.com/tild3161-3436-4934-b734-303866626564/001380_Ris_s_cyplenk.png'),
+(138, 'Рис с цыпленком унаги', 'https://static.tildacdn.com/tild3161-3436-4934-b734-303866626564/001380_Ris_s_cyplenk.png'),
 (139, 'Суп гороховый с куриным бедром', 'https://static.tildacdn.com/tild6331-3233-4032-b332-386264303666/001390_Sup_gorohovyj.png'),
 (140, 'Шопский салат с курицей', 'https://static.tildacdn.com/tild3166-3665-4261-b233-346639653538/001400_Sopskij_salat.png')
 ON CONFLICT DO NOTHING;
@@ -658,21 +658,21 @@ INSERT INTO dishes (id, title, image, in_program) VALUES
 (149, 'Удон из пшеничной лапши, с морепродуктами', 'https://static.tildacdn.com/tila3139-3633-4332-b935-373539353361/009.png', FALSE),
 (150, 'Утиная грудка су-вид в терияки глазури с запечённым картофелем бэби', 'https://static.tildacdn.com/tila6436-6366-4938-a636-653031373737/010.png', FALSE),
 (151, 'Салат Цезарь с жареными креветками', 'https://static.tildacdn.com/tila6562-3030-4564-a131-323137343932/011.png', FALSE),
-(152, 'Чиабатта с курицей, пармезаном в соусе "Цезарь"', 'https://static.tildacdn.com/tila3861-3261-4061-a361-666366303831/012.png', FALSE),
-(153, 'Чикенстроганов с паприкой и картофелем "Айдахо"', 'https://static.tildacdn.com/tila3232-6264-4363-b430-353738383630/013.png', FALSE),
+(152, 'Чиабатта с курицей, пармезаном в соусе «Цезарь»', 'https://static.tildacdn.com/tila3861-3261-4061-a361-666366303831/012.png', FALSE),
+(153, 'Чикенстроганов с паприкой и картофелем «Айдахо»', 'https://static.tildacdn.com/tila3232-6264-4363-b430-353738383630/013.png', FALSE),
 (154, 'Шницель куриный с картофельным пюре', 'https://static.tildacdn.com/tila6363-3163-4433-b237-316264613537/014.png', FALSE),
 (155, 'Индейка с гречкой и овощами', 'https://static.tildacdn.com/tila3432-6535-4165-b365-333561643665/015.png', FALSE),
 (156, 'Курица терияки с грибами шиитаке и рисом', 'https://static.tildacdn.com/tila3365-6331-4664-a634-356134383066/016.png', FALSE),
-(157, 'Люля-кебаб с картофелем "Айдахо"', 'https://static.tildacdn.com/tila6538-6461-4336-a366-373938366132/017.png', FALSE),
-(158, 'Паста орзо с говяжьим фаршем "болоньезе" и моцареллой', 'https://static.tildacdn.com/tila3866-6135-4833-b538-656233326534/018.png', FALSE),
+(157, 'Люля-кебаб с картофелем «Айдахо»', 'https://static.tildacdn.com/tila6538-6461-4336-a366-373938366132/017.png', FALSE),
+(158, 'Паста орзо с говяжьим фаршем «болоньезе» и моцареллой', 'https://static.tildacdn.com/tila3866-6135-4833-b538-656233326534/018.png', FALSE),
 (159, 'Паста с курицей в сливочно-грибном соусе', 'https://static.tildacdn.com/tila3964-3032-4266-b332-333739373838/020.png', FALSE),
 (160, 'Спагетти Диабло с колбасками в остром томатном соусе', 'https://static.tildacdn.com/tila3166-3232-4533-a465-346562373765/021.png', FALSE),
 (161, 'Филе бедра цыплёнка в соусе карри и рисом', 'https://static.tildacdn.com/tila3838-6638-4262-b337-316561366331/023.png', FALSE),
 (162, 'Чесночная курица с лапшой и катык-соусом', 'https://static.tildacdn.com/tila3839-3663-4438-b230-633834643438/024.png', FALSE),
 (163, 'Курица в грибном соусе с гречкой', 'https://static.tildacdn.com/tila6335-3266-4434-a664-373365313163/027.png', FALSE),
 (164, 'Орзо с лисичками, куриной грудкой и шпинатом', 'https://static.tildacdn.com/tila6239-3933-4965-a334-643362616530/029.png', FALSE),
-(165, 'Паста "Болоньезе" с говядиной и курицей', 'https://static.tildacdn.com/tila3333-3832-4133-b139-666535623532/030.png', FALSE),
-(166, 'Паста "Карбонара"', 'https://static.tildacdn.com/tila6330-3363-4530-b162-656162613562/031.png', FALSE),
+(165, 'Паста «Болоньезе» с говядиной и курицей', 'https://static.tildacdn.com/tila3333-3832-4133-b139-666535623532/030.png', FALSE),
+(166, 'Паста «Карбонара»', 'https://static.tildacdn.com/tila6330-3363-4530-b162-656162613562/031.png', FALSE),
 (167, 'Цыпленок том ям, с фузилли', 'https://static.tildacdn.com/tila6638-6564-4163-b439-346166313638/032.png', FALSE),
 (168, 'Паста с ветчиной и грибами', 'https://static.tildacdn.com/tila3436-3833-4566-b037-393163623864/033.png', FALSE);
 
@@ -702,7 +702,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (2, (SELECT id FROM ingredients WHERE title = 'сахар'), 20),
 
 
--- 4. Чикенболлы с соусом «Тропикана» с рисом по-мексикански
+-- 4. Чикенболлы с соусом тропикана и рисом по-мексикански
 (4, (SELECT id FROM ingredients WHERE title = 'курица'), 120),
 (4, (SELECT id FROM ingredients WHERE title = 'рис'), 80),
 (4, (SELECT id FROM ingredients WHERE title = 'фасоль красная'), 40),
@@ -711,7 +711,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (4, (SELECT id FROM ingredients WHERE title = 'зелень'), 10),
 (4, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 5. Салат «Белоснежка»
+-- 5. Салат Белоснежка
 (5, (SELECT id FROM ingredients WHERE title = 'филе куриной грудки'), 100),
 (5, (SELECT id FROM ingredients WHERE title = 'брынза'), 50),
 (5, (SELECT id FROM ingredients WHERE title = 'капуста пекинская'), 80),
@@ -756,10 +756,10 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (9, (SELECT id FROM ingredients WHERE title = 'курица'), 80),
 (9, (SELECT id FROM ingredients WHERE title = 'говядина'), 60),
 (9, (SELECT id FROM ingredients WHERE title = 'рис басмати'), 80),
-(9, (SELECT id FROM ingredients WHERE title = 'соус болоньезе'), 40),
 (9, (SELECT id FROM ingredients WHERE title = 'сахар'), 15),
 (9, (SELECT id FROM ingredients WHERE title = 'тимьян'), 3),
 (9, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
+(9, (SELECT id FROM ingredients WHERE title = 'брусника'), 40),
 
 -- 10. Рулет с курицей, курагой и орехами
 (10, (SELECT id FROM ingredients WHERE title = 'куриное филе'), 150),
@@ -881,7 +881,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (23, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
 
--- 25. Рыбная котлетка и салат из свеклы и апельсина
+-- 25. Рыбная котлета с салатом из печеной свеклы и апельсином
 (25, (SELECT id FROM ingredients WHERE title = 'филе горбуши'), 60),
 (25, (SELECT id FROM ingredients WHERE title = 'филе минтая'), 60),
 (25, (SELECT id FROM ingredients WHERE title = 'лук'), 20),
@@ -921,7 +921,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 
 
 
--- 30. Суп-пюре с брокколи и курицей
+-- 30. Суп-пюре с брокколи и мясом и без
 (30, (SELECT id FROM ingredients WHERE title = 'курица'), 80),
 (30, (SELECT id FROM ingredients WHERE title = 'брокколи'), 100),
 (30, (SELECT id FROM ingredients WHERE title = 'картофель'), 60),
@@ -1000,7 +1000,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (40, (SELECT id FROM ingredients WHERE title = 'петрушка'), 10),
 (40, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 41. Сэндвич-ролл с горбушей и яйцом
+-- 41. Сэндвич-ролл с горбушей
 (41, (SELECT id FROM ingredients WHERE title = 'лаваш'), 70),
 (41, (SELECT id FROM ingredients WHERE title = 'филе горбуши'), 80),
 (41, (SELECT id FROM ingredients WHERE title = 'яйцо'), 50),
@@ -1020,7 +1020,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (42, (SELECT id FROM ingredients WHERE title = 'сливки'), 40),
 (42, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 43. Фрикадельки с овощами по-итальянски со спагетти
+-- 43. Фрикадельки с овощами по-итальянски и спагетти
 (43, (SELECT id FROM ingredients WHERE title = 'фарш из куриного филе'), 100),
 (43, (SELECT id FROM ingredients WHERE title = 'спагетти'), 80),
 (43, (SELECT id FROM ingredients WHERE title = 'морковь'), 25),
@@ -1132,7 +1132,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (58, (SELECT id FROM ingredients WHERE title = 'зелень'), 10),
 (58, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 59. Котлета с соусом «Болоньезе» и картофельным пюре
+-- 59. Котлета с соусом болоньезе и картофельным пюре
 (59, (SELECT id FROM ingredients WHERE title = 'картофель'), 120),
 (59, (SELECT id FROM ingredients WHERE title = 'котлета куриная'), 100),
 (59, (SELECT id FROM ingredients WHERE title = 'соус болоньезе'), 40),
@@ -1203,7 +1203,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 
 
 
--- 70. Паровая котлета с моцареллой с брокколи
+-- 70. Паровая котлета и моцарелла с брокколи
 (70, (SELECT id FROM ingredients WHERE title = 'филе куриной грудки'), 100),
 (70, (SELECT id FROM ingredients WHERE title = 'брокколи'), 80),
 (70, (SELECT id FROM ingredients WHERE title = 'моцарелла'), 40),
@@ -1252,7 +1252,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (76, (SELECT id FROM ingredients WHERE title = 'крахмал'), 10),
 (76, (SELECT id FROM ingredients WHERE title = 'сахар'), 20),
 
--- 77. Штрудель с овощами и курицей
+-- 77. Штрудель с курицей и овощами
 (77, (SELECT id FROM ingredients WHERE title = 'тесто слоеное'), 80),
 (77, (SELECT id FROM ingredients WHERE title = 'фарш куриный'), 100),
 (77, (SELECT id FROM ingredients WHERE title = 'капуста цветная'), 40),
@@ -1282,7 +1282,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (80, (SELECT id FROM ingredients WHERE title = 'заправка'), 25),
 
 
--- 82. Сэндвич-ролл цезарь
+-- 82. Сэндвич-ролл Цезарь
 (82, (SELECT id FROM ingredients WHERE title = 'лаваш тонкий'), 70),
 (82, (SELECT id FROM ingredients WHERE title = 'курица'), 100),
 (82, (SELECT id FROM ingredients WHERE title = 'сыр'), 30),
@@ -1303,7 +1303,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (83, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
 
--- 85. Салат «Грин энерджи»
+-- 85. Салат Грин энерджи
 (85, (SELECT id FROM ingredients WHERE title = 'куриное филе'), 80),
 (85, (SELECT id FROM ingredients WHERE title = 'шампиньоны'), 50),
 (85, (SELECT id FROM ingredients WHERE title = 'салат айсберг'), 60),
@@ -1326,7 +1326,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (86, (SELECT id FROM ingredients WHERE title = 'ванилин'), 2),
 (86, (SELECT id FROM ingredients WHERE title = 'йогурт'), 40),
 
--- 87. Кесадилья с говядиной
+-- 87. Кесадилья болоньезе
 (87, (SELECT id FROM ingredients WHERE title = 'тортилья'), 80),
 (87, (SELECT id FROM ingredients WHERE title = 'говядина'), 100),
 (87, (SELECT id FROM ingredients WHERE title = 'помидоры'), 40),
@@ -1374,7 +1374,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (91, (SELECT id FROM ingredients WHERE title = 'брокколи'), 50),
 (91, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 92. Творожный крем с грушево-анансовым конфитюром
+-- 92. Творожный крем с грушево-ананасовым конфитюром
 (92, (SELECT id FROM ingredients WHERE title = 'банан'), 50),
 (92, (SELECT id FROM ingredients WHERE title = 'творог'), 120),
 (92, (SELECT id FROM ingredients WHERE title = 'груша'), 50),
@@ -1390,7 +1390,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (93, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
 
--- 95. Кабачок запеченный с ветчиной и сыром
+-- 95. Печеные кабачки с сыром и ветчиной
 (95, (SELECT id FROM ingredients WHERE title = 'кабачок'), 100),
 (95, (SELECT id FROM ingredients WHERE title = 'моцарелла'), 40),
 (95, (SELECT id FROM ingredients WHERE title = 'ветчина куриная'), 50),
@@ -1419,7 +1419,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (97, (SELECT id FROM ingredients WHERE title = 'апельсин'), 30),
 (97, (SELECT id FROM ingredients WHERE title = 'малина'), 30),
 
--- 98. Паста с песто и курицей в соусе «Бешамель»
+-- 98. Паста с песто и курицей в соусе бешамель
 (98, (SELECT id FROM ingredients WHERE title = 'куриное филе'), 100),
 (98, (SELECT id FROM ingredients WHERE title = 'фарфалле'), 80),
 (98, (SELECT id FROM ingredients WHERE title = 'масло'), 15),
@@ -1586,7 +1586,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (113, (SELECT id FROM ingredients WHERE title = 'масло'), 10),
 (113, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 114. Оладьи печеночные и спагетти с соусом «Бешамель»
+-- 114. Оладьи печеночные и спагетти с соусом бешамель
 (114, (SELECT id FROM ingredients WHERE title = 'спагетти'), 80),
 (114, (SELECT id FROM ingredients WHERE title = 'печень куриная'), 50),
 (114, (SELECT id FROM ingredients WHERE title = 'печень говяжья'), 50),
@@ -1636,7 +1636,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (118, (SELECT id FROM ingredients WHERE title = 'розмарин'), 3),
 (118, (SELECT id FROM ingredients WHERE title = 'перец'), 3),
 
--- 119. Фобо с говядиной
+-- 119. Фо-бо с говядиной
 (119, (SELECT id FROM ingredients WHERE title = 'куриный бульон'), 200),
 (119, (SELECT id FROM ingredients WHERE title = 'соус соевый'), 15),
 (119, (SELECT id FROM ingredients WHERE title = 'лапша пшеничная'), 60),
@@ -1646,7 +1646,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (119, (SELECT id FROM ingredients WHERE title = 'корица'), 2),
 (119, (SELECT id FROM ingredients WHERE title = 'специи'), 5),
 
--- 120. Котлеты из индейки с овощами и соусом «Паприка»
+-- 120. Котлеты из индейки с овощами и соусом паприка
 (120, (SELECT id FROM ingredients WHERE title = 'фарш из филе индейки'), 60),
 (120, (SELECT id FROM ingredients WHERE title = 'фарш из филе куриного бедра'), 60),
 (120, (SELECT id FROM ingredients WHERE title = 'капуста'), 30),
@@ -1724,7 +1724,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (126, (SELECT id FROM ingredients WHERE title = 'сахар'), 15),
 (126, (SELECT id FROM ingredients WHERE title = 'соль'), 2),
 
--- 128. Мясо по-французски с индейкой
+-- 128. Мясо по французски с индейкой
 (128, (SELECT id FROM ingredients WHERE title = 'картофель'), 100),
 (128, (SELECT id FROM ingredients WHERE title = 'филе грудки индейки'), 100),
 (128, (SELECT id FROM ingredients WHERE title = 'томаты свежие'), 50),
@@ -1792,7 +1792,7 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (137, (SELECT id FROM ingredients WHERE title = 'изюм'), 25),
 (137, (SELECT id FROM ingredients WHERE title = 'сахар'), 20),
 (137, (SELECT id FROM ingredients WHERE title = 'ванилин'), 2),
--- 138. Рис с цыпленком «Унаги»
+-- 138. Рис с цыпленком унаги
 (138, (SELECT id FROM ingredients WHERE title = 'филе куриной грудки'), 100),
 (138, (SELECT id FROM ingredients WHERE title = 'морковь'), 30),
 (138, (SELECT id FROM ingredients WHERE title = 'лук репчатый'), 25),
@@ -1917,12 +1917,13 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 (48, (SELECT id FROM ingredients WHERE title = 'лайм'), 10),
 (48, (SELECT id FROM ingredients WHERE title = 'кинза'), 5),
 -- 51. Боул "Деревенский" — 300 г
-(51, (SELECT id FROM ingredients WHERE title = 'картофель'), 130),
 (51, (SELECT id FROM ingredients WHERE title = 'яйцо'), 60),
-(51, (SELECT id FROM ingredients WHERE title = 'творог'), 50),
-(51, (SELECT id FROM ingredients WHERE title = 'огурец'), 30),
-(51, (SELECT id FROM ingredients WHERE title = 'помидор'), 20),
 (51, (SELECT id FROM ingredients WHERE title = 'зелень'), 10),
+(51, (SELECT id FROM ingredients WHERE title = 'шампиньоны'), 60),
+(51, (SELECT id FROM ingredients WHERE title = 'творог'), 30),
+(51, (SELECT id FROM ingredients WHERE title = 'огурец'), 20),
+(51, (SELECT id FROM ingredients WHERE title = 'картофель'), 120),
+(51, (SELECT id FROM ingredients WHERE title = 'масло растительное'), 5),
 -- 54. Котлеты по-татарски... — 330 г
 (54, (SELECT id FROM ingredients WHERE title = 'фарш говяжий'), 100),
 (54, (SELECT id FROM ingredients WHERE title = 'картофель'), 140),
@@ -1953,12 +1954,14 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 -- 69. Курочка в соусе чили-апельсин... — 330 г
 (69, (SELECT id FROM ingredients WHERE title = 'филе куриного бедра'), 110),
 (69, (SELECT id FROM ingredients WHERE title = 'сок апельсиновый'), 40),
-(69, (SELECT id FROM ingredients WHERE title = 'соус сладкий чили'), 30),
 (69, (SELECT id FROM ingredients WHERE title = 'кускус'), 70),
 (69, (SELECT id FROM ingredients WHERE title = 'морковь'), 30),
 (69, (SELECT id FROM ingredients WHERE title = 'кабачок'), 30),
 (69, (SELECT id FROM ingredients WHERE title = 'перец болгарский'), 15),
 (69, (SELECT id FROM ingredients WHERE title = 'масло растительное'), 5),
+(69, (SELECT id FROM ingredients WHERE title = 'имбирь'), 5),
+(69, (SELECT id FROM ingredients WHERE title = 'мед'), 10),
+(69, (SELECT id FROM ingredients WHERE title = 'соус соевый'), 15),
 -- 71. Рис по-тайски с яйцом — 290 г
 (71, (SELECT id FROM ingredients WHERE title = 'рис жасмин'), 80),
 (71, (SELECT id FROM ingredients WHERE title = 'яйцо'), 100),
@@ -2022,10 +2025,10 @@ INSERT INTO dish_ingredients (dish_id, ingredient_id, quantity) VALUES
 -- 127. Чиабатта с курицей су-вид... — 250 г
 (127, (SELECT id FROM ingredients WHERE title = 'чиабатта'), 80),
 (127, (SELECT id FROM ingredients WHERE title = 'филе куриной грудки'), 80),
-(127, (SELECT id FROM ingredients WHERE title = 'соус Песто'), 20),
 (127, (SELECT id FROM ingredients WHERE title = 'моцарелла'), 30),
 (127, (SELECT id FROM ingredients WHERE title = 'руккола'), 15),
 (127, (SELECT id FROM ingredients WHERE title = 'помидор'), 25),
+(127, (SELECT id FROM ingredients WHERE title = 'паста Том-ям'), 20),
 -- 132. Гирос с курицей — 300 г
 (132, (SELECT id FROM ingredients WHERE title = 'лаваш тонкий'), 70),
 (132, (SELECT id FROM ingredients WHERE title = 'филе куриного бедра'), 110),
