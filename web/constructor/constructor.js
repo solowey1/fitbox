@@ -1447,7 +1447,7 @@
 
     const allChip = makeChip(CONFIG.allLabel, null, state.selectedTypes.size === 0, () => {
       state.selectedTypes.clear();
-      renderChips();
+      updateChips();
       applyFilter();
     }, CONFIG.allImage);
     allChip.classList.add('fbc-chip--all');
@@ -1469,7 +1469,7 @@
       const chip = makeChip(type.title, count, state.selectedTypes.has(type.slug), () => {
         if (state.selectedTypes.has(type.slug)) state.selectedTypes.delete(type.slug);
         else state.selectedTypes.add(type.slug);
-        renderChips();
+        updateChips();
         applyFilter();
       }, image, minPrice);
       chip.setAttribute('data-type', type.slug); // размер фото подгоняется под блюдо в CSS
@@ -1481,6 +1481,20 @@
   };
 
   /**
+   * Выбор приёма: меняем только состояние кнопок. Перерисовка ряда заново пересоздавала бы фото
+   * (мерцание) и сбрасывала бы прокрутку ряда.
+   */
+  const updateChips = () => {
+    Array.from(ui.chips.children).forEach((chip) => {
+      const active = chip.classList.contains('fbc-chip--all')
+        ? state.selectedTypes.size === 0
+        : state.selectedTypes.has(chip.getAttribute('data-type'));
+      chip.classList.toggle('is-active', active);
+      chip.setAttribute('aria-pressed', String(active));
+    });
+  };
+
+  /**
    * Ширина кнопок приёмов: делим ширину ряда поровну, чтобы кнопки заняли её всю.
    * Ниже предела по тексту не сжимаем — название не должно переноситься или вылезать за поля:
    * тогда ряд прокручивается. Размер фото считается от ширины кнопки (CSS, --fbc-chip-w).
@@ -1489,8 +1503,10 @@
   const fitChips = () => {
     const row = ui.chips;
     if (!row || !row.classList.contains('fbc-chips--media')) return;
-    row.style.removeProperty('--fbc-chip-w');
-    if (window.matchMedia('(max-width: 640px)').matches) return;
+    if (window.matchMedia('(max-width: 640px)').matches) {
+      row.style.removeProperty('--fbc-chip-w');
+      return;
+    }
 
     const cards = Array.from(row.children);
     if (!cards.length) return;

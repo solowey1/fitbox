@@ -178,6 +178,8 @@
   border-radius: var(--l);
   white-space: normal;
   text-align: left;
+  /* без `all` из .fbc-chip: ширина и размер фото меняются при подгонке (fitChips) и не должны анимироваться */
+  transition: color .2s ease-in-out, background-color .2s ease-in-out, border-color .2s ease-in-out, box-shadow .2s ease-in-out;
 }
 
 /* у блюд разная ширина на фото (суп узкий, «Все» и десерты — почти во всю ширину) */
