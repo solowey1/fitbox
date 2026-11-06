@@ -84,14 +84,13 @@
 
     // Фото на кнопках «Выберите приемы»: вырезанные из фона блюда 3:2 (тень — CSS).
     // slug приёма пищи -> ссылка; приёма нет в списке — кнопка без фото.
-    // Файлы без ссылки на Тильду лежат на сервере в web/constructor/filters/ — после загрузки на Тильду замените ссылки
     allImage: 'https://static.tildacdn.com/tila3761-6364-4133-a164-626665623831/all.png',
     mealImages: {
       breakfast: 'https://static.tildacdn.com/tila3165-3932-4634-b761-633039653966/breakfast.png',
-      snack: `${APP_ORIGIN}/web/constructor/filters/snack.webp`,
-      salad: `${APP_ORIGIN}/web/constructor/filters/salad.webp`,
-      soup: `${APP_ORIGIN}/web/constructor/filters/soup.webp`,
-      main: `${APP_ORIGIN}/web/constructor/filters/main.webp`,
+      snack: 'https://static.tildacdn.com/tila3536-3764-4631-b062-346337323436/snack.png',
+      salad: 'https://static.tildacdn.com/tila3330-3037-4537-b439-356334353163/salad.png',
+      soup: 'https://static.tildacdn.com/tila6633-3539-4337-a463-303531623761/soup.png',
+      main: 'https://static.tildacdn.com/tila3336-3962-4864-a637-363536633636/main.png',
       dessert: 'https://static.tildacdn.com/tila6265-3661-4330-b764-633636313334/deserts.png'
     },
     mealImageWidth: 360, // ширина фото на кнопке, px (на экране ~165 px, запас под ретину)
