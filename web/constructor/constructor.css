@@ -147,6 +147,75 @@
   opacity: .6;
 }
 
+/* Кнопки приёмов — карточки; у приёмов с фото оно у верхней грани и чуть выезжает за неё.
+   Фото блюд — на белом фоне: brightness добивает почти белый фон до чисто белого,
+   multiply «растворяет» его на фоне кнопки */
+.fbc-chips--media {
+  --fbc-chip-w: 150px;
+  --fbc-chip-img: 112px;
+  --fbc-chip-lift: 30px; /* на сколько фото выезжает за верх кнопки */
+  align-items: stretch;
+  padding-top: var(--fbc-chip-lift);
+  row-gap: calc(var(--fbc-chip-lift) + var(--s));
+}
+
+.fbc-chip--card {
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 2px;
+  width: var(--fbc-chip-w);
+  padding: var(--m);
+  border-radius: var(--l);
+  white-space: normal;
+  text-align: left;
+}
+
+.fbc-chip--media {
+  padding-top: calc(var(--fbc-chip-img) - var(--fbc-chip-lift) + 4px);
+}
+
+.fbc-chip-image {
+  position: absolute;
+  top: calc(var(--fbc-chip-lift) * -1);
+  left: 50%;
+  width: var(--fbc-chip-img);
+  height: var(--fbc-chip-img);
+  margin-left: calc(var(--fbc-chip-img) / -2);
+  object-fit: contain;
+  filter: brightness(1.08);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.fbc-chip--card .fbc-chip-label {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.fbc-chip--card .fbc-chip-count {
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--grey-3);
+  opacity: 1;
+}
+
+/* «Все» — карточка меньшей ширины */
+.fbc-chip--card.fbc-chip--all {
+  width: auto;
+  min-width: 72px;
+}
+
+/* выбранная кнопка с фото: заливка зелёным закрасила бы фото, поэтому — рамка */
+.fbc-chip--card.is-active:not(.fbc-chip--all) {
+  color: var(--dark);
+  background: var(--surface);
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+}
+
 .fbc-chip:focus-visible,
 .fbc-btn:focus-visible,
 .fbc-card-open:focus-visible,
@@ -847,6 +916,34 @@
   .fbc-chip {
     padding: 10px 14px;
     font-size: 13px;
+  }
+
+  .fbc-chips--media {
+    --fbc-chip-w: 124px;
+    --fbc-chip-img: 92px;
+    --fbc-chip-lift: 24px;
+  }
+
+  .fbc-chips--media {
+    padding-top: var(--fbc-chip-lift); /* перекрывает padding: 0 … 4px у .fbc-chips */
+  }
+
+  .fbc-chip--card {
+    flex: none;
+    padding: var(--s);
+  }
+
+  .fbc-chip--media {
+    padding-top: calc(var(--fbc-chip-img) - var(--fbc-chip-lift) + 4px);
+  }
+
+  .fbc-chip--card .fbc-chip-label {
+    font-size: 14px;
+    line-height: 17px;
+  }
+
+  .fbc-chip--card .fbc-chip-count {
+    font-size: 12px;
   }
 
   .fbc-section-title {
