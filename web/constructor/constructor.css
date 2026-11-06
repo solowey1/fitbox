@@ -151,12 +151,15 @@
    Фото — вырезанные из фона блюда 3:2 (поля сверху 10 %, снизу 7 %, по бокам разные), тень рисует CSS.
    Фото шире кнопки: прозрачные поля уходят за края, а само блюдо остаётся с отступом от краёв */
 .fbc-chips--media {
-  --fbc-chip-w: 184px;
+  --fbc-chip-w: 150px;   /* до расчёта в constructor.js (fitChips) и на телефоне; на десктопе JS делит ширину ряда */
   --fbc-chip-grow: 16px; /* на сколько фото шире кнопки */
   --fbc-chip-lift: 24px; /* на сколько само блюдо выезжает за верх кнопки */
+  flex-wrap: nowrap;     /* один ряд: не помещается — прокрутка */
   align-items: flex-start;
-  padding-top: var(--fbc-chip-lift);
-  row-gap: calc(var(--fbc-chip-lift) + var(--s));
+  overflow-x: auto;
+  margin: 0 -2px;        /* 2 px по бокам — чтобы рамка крайних кнопок не обрезалась прокруткой */
+  padding: var(--fbc-chip-lift) 2px 2px;
+  scrollbar-width: thin;
 }
 
 .fbc-chip--card {
@@ -164,13 +167,14 @@
   --fbc-chip-img-h: calc(var(--fbc-chip-img-w) * 2 / 3);
   position: relative;
   box-sizing: border-box;
+  flex: none;
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
   gap: 2px;
   width: var(--fbc-chip-w);
   aspect-ratio: 1 / 1;
-  padding: var(--m);
+  padding: 14px;
   border-radius: var(--l);
   white-space: normal;
   text-align: left;
@@ -194,9 +198,10 @@
 }
 
 .fbc-chip--card .fbc-chip-label {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 19px;
+  white-space: nowrap;
 }
 
 .fbc-chip--card .fbc-chip-count {
