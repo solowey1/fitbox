@@ -82,16 +82,19 @@
     menuCacheMinutes: 5, // как долго помнить меню по датам для проверки корзины (на сервере кэш тоже 5 минут)
     allLabel: 'Все',
 
-    // Фото на кнопках «Выберите приемы»: slug приёма пищи -> фото на Тильде (готовые фото блюд 001–033).
-    // Приёма нет в списке — кнопка без фото (подходящего фото пока нет: десерты, напитки)
+    // Фото на кнопках «Выберите приемы»: вырезанные из фона блюда 3:2 (тень — CSS).
+    // slug приёма пищи -> ссылка; приёма нет в списке — кнопка без фото.
+    // Файлы без ссылки на Тильду лежат на сервере в web/constructor/filters/ — после загрузки на Тильду замените ссылки
+    allImage: 'https://static.tildacdn.com/tila3761-6364-4133-a164-626665623831/all.png',
     mealImages: {
-      breakfast: 'https://static.tildacdn.com/tila3432-6535-4165-b365-333561643665/015.png', // индейка с гречкой
-      snack: 'https://static.tildacdn.com/tila3861-3261-4061-a361-666366303831/012.png',     // чиабатта с курицей
-      salad: 'https://static.tildacdn.com/tila6562-3030-4564-a131-323137343932/011.png',     // цезарь с креветками
-      soup: 'https://static.tildacdn.com/tila3337-3962-4031-a435-393466323766/008.png',      // тыквенный крем-суп
-      main: 'https://static.tildacdn.com/tila6436-6366-4938-a636-653031373737/010.png'       // утиная грудка
+      breakfast: 'https://static.tildacdn.com/tila3165-3932-4634-b761-633039653966/breakfast.png',
+      snack: `${APP_ORIGIN}/web/constructor/filters/snack.webp`,
+      salad: `${APP_ORIGIN}/web/constructor/filters/salad.webp`,
+      soup: `${APP_ORIGIN}/web/constructor/filters/soup.webp`,
+      main: `${APP_ORIGIN}/web/constructor/filters/main.webp`,
+      dessert: 'https://static.tildacdn.com/tila6265-3661-4330-b764-633636313334/deserts.png'
     },
-    mealImageWidth: 240, // ширина фото на кнопке, px (на экране ~110 px, запас под ретину)
+    mealImageWidth: 360, // ширина фото на кнопке, px (на экране ~165 px, запас под ретину)
     thumbnailWidth: 600, // ширина фото в карточке, px (карточка ~240 px, запас под ретину)
 
     // Названия опций товара в корзине Тильды (видны покупателю и в письме с заказом).
@@ -1415,7 +1418,7 @@
     ui.chips.textContent = '';
     const cards = Object.keys(CONFIG.mealImages).length > 0; // кнопки приёмов — карточки с фото
 
-    const makeChip = (label, count, isActive, onClick, image) => {
+    const makeChip = (label, count, isActive, onClick, image, minPrice) => {
       const chip = el('button', 'fbc-chip');
       chip.type = 'button';
       chip.setAttribute('aria-pressed', String(isActive));
@@ -1436,6 +1439,7 @@
         const text = cards ? `${count} ${plural(count, 'блюдо', 'блюда', 'блюд')}` : String(count);
         chip.append(el('span', 'fbc-chip-count', text));
       }
+      if (cards && minPrice) chip.append(el('span', 'fbc-chip-price', `от ${formatPrice(minPrice)} / блюдо`));
       chip.addEventListener('click', onClick);
       return chip;
     };
@@ -1444,15 +1448,18 @@
       state.selectedTypes.clear();
       renderChips();
       applyFilter();
-    });
+    }, CONFIG.allImage);
     allChip.classList.add('fbc-chip--all');
     ui.chips.append(allChip);
-    let hasImages = false;
+    let hasImages = !!CONFIG.allImage;
 
     const dishes = dishesForDay(state.selectedDay);
     state.mealTypes.forEach((type) => {
-      const count = dishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1).length;
-      if (!count) return; // приёма нет в меню этого дня
+      const ofType = dishes.filter(dish => dish.mealTypes.indexOf(type.slug) !== -1);
+      const count = ofType.length;
+      if (!count) return; // приёма нет в меню этого дня — кнопки нет (например, «Большие порции»)
+      const prices = ofType.map(dish => Number(dish.price)).filter(price => price > 0);
+      const minPrice = prices.length ? Math.min(...prices) : 0;
       const image = CONFIG.mealImages[type.slug] || '';
       if (image) hasImages = true;
       ui.chips.append(makeChip(type.title, count, state.selectedTypes.has(type.slug), () => {
@@ -1460,7 +1467,7 @@
         else state.selectedTypes.add(type.slug);
         renderChips();
         applyFilter();
-      }, image));
+      }, image, minPrice));
     });
     // фото выезжают за верх кнопки — ряду нужен отступ сверху
     ui.chips.classList.toggle('fbc-chips--media', hasImages);
