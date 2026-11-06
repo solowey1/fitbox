@@ -147,42 +147,47 @@
   opacity: .6;
 }
 
-/* Кнопки приёмов — карточки; у приёмов с фото оно у верхней грани и выезжает за неё.
-   Фото — вырезанные из фона блюда 3:2 (поля сверху 10 %, снизу 7 %), тень рисует CSS */
+/* Кнопки приёмов — квадратные карточки; у приёмов с фото оно у верхней грани и выезжает за неё.
+   Фото — вырезанные из фона блюда 3:2 (поля сверху 10 %, снизу 7 %, по бокам разные), тень рисует CSS.
+   Фото шире кнопки: прозрачные поля уходят за края, а само блюдо остаётся с отступом от краёв */
 .fbc-chips--media {
   --fbc-chip-w: 184px;
-  --fbc-chip-img-w: calc(var(--fbc-chip-w) - 20px);       /* фото занимает ширину кнопки минус по 10 px по бокам */
-  --fbc-chip-img-h: calc(var(--fbc-chip-img-w) * 2 / 3);
+  --fbc-chip-grow: 16px; /* на сколько фото шире кнопки */
   --fbc-chip-lift: 24px; /* на сколько само блюдо выезжает за верх кнопки */
-  align-items: stretch;
+  align-items: flex-start;
   padding-top: var(--fbc-chip-lift);
   row-gap: calc(var(--fbc-chip-lift) + var(--s));
 }
 
 .fbc-chip--card {
+  --fbc-chip-img-w: calc(var(--fbc-chip-w) + var(--fbc-chip-grow));
+  --fbc-chip-img-h: calc(var(--fbc-chip-img-w) * 2 / 3);
   position: relative;
+  box-sizing: border-box;
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
   gap: 2px;
   width: var(--fbc-chip-w);
+  aspect-ratio: 1 / 1;
   padding: var(--m);
   border-radius: var(--l);
   white-space: normal;
   text-align: left;
 }
 
-/* под блюдом (оно занимает 83 % высоты фото) остаётся место для подписей */
-.fbc-chip--media {
-  padding-top: calc(var(--fbc-chip-img-h) * .83 - var(--fbc-chip-lift) + 8px);
-}
+/* у блюд разная ширина на фото (суп узкий, «Все» и десерты — почти во всю ширину) */
+.fbc-chip--card.fbc-chip--all { --fbc-chip-img-w: calc(var(--fbc-chip-w) - 12px); }
+.fbc-chip--card[data-type="dessert"] { --fbc-chip-img-w: calc(var(--fbc-chip-w) - 4px); }
+.fbc-chip--card[data-type="soup"] { --fbc-chip-img-w: calc(var(--fbc-chip-w) + 36px); }
 
 .fbc-chip-image {
   position: absolute;
   top: calc(var(--fbc-chip-img-h) * -.1 - var(--fbc-chip-lift));
-  left: 10px;
+  left: 50%;
   width: var(--fbc-chip-img-w);
   height: var(--fbc-chip-img-h);
+  margin-left: calc(var(--fbc-chip-img-w) / -2);
   object-fit: contain;
   filter: drop-shadow(0 6px 5px rgba(0, 0, 0, .16));
   pointer-events: none;
@@ -205,13 +210,8 @@
   font-size: 13px;
   font-weight: 400;
   line-height: 16px;
+  white-space: nowrap;
   color: var(--green);
-}
-
-/* «Все» без фото — карточка меньшей ширины */
-.fbc-chip--card.fbc-chip--all:not(.fbc-chip--media) {
-  width: auto;
-  min-width: 72px;
 }
 
 /* выбранная кнопка с фото: заливка зелёным закрасила бы фото, поэтому — рамка */
@@ -926,13 +926,9 @@
 
   .fbc-chips--media {
     --fbc-chip-w: 148px;
-    --fbc-chip-img-w: calc(var(--fbc-chip-w) - 14px);
+    --fbc-chip-grow: 12px;
     --fbc-chip-lift: 18px;
     padding-top: var(--fbc-chip-lift); /* перекрывает padding: 0 … 4px у .fbc-chips */
-  }
-
-  .fbc-chip-image {
-    left: 7px;
   }
 
   .fbc-chip--card {
@@ -940,9 +936,7 @@
     padding: var(--s);
   }
 
-  .fbc-chip--media {
-    padding-top: calc(var(--fbc-chip-img-h) * .83 - var(--fbc-chip-lift) + 6px);
-  }
+  .fbc-chip--card[data-type="soup"] { --fbc-chip-img-w: calc(var(--fbc-chip-w) + 28px); }
 
   .fbc-chip--card .fbc-chip-label {
     font-size: 14px;
@@ -951,10 +945,12 @@
 
   .fbc-chip--card .fbc-chip-count {
     font-size: 11px;
+    line-height: 14px;
   }
 
   .fbc-chip-price {
     font-size: 12px;
+    line-height: 15px;
   }
 
   .fbc-section-title {
