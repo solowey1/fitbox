@@ -72,10 +72,28 @@ web/
 удобнее всего в «Настройки сайта → Ещё → HTML-код для вставки внутрь HEAD»:
 
 ```html
-<script src="https://app.fitbox.su/web/shared/delivery-date.js"></script>
-<script src="https://app.fitbox.su/web/shared/delivery-datepicker.js"></script>
-<script src="https://app.fitbox.su/web/shared/delivery-cost.js"></script>
+<script src="https://app.fitbox.su/web/shared/delivery-date.js" defer></script>
+<script src="https://app.fitbox.su/web/shared/delivery-datepicker.js" defer></script>
+<script src="https://app.fitbox.su/web/shared/delivery-cost.js" defer></script>
 ```
+
+`defer` обязателен: без него браузер не рисует страницу, пока скрипты не скачаются, и при
+медленном сервере покупатель видит белый экран. Порядок выполнения `defer` сохраняет.
+
+**Сторонние библиотеки и шрифт — только со своего сервера** (`web/vendor/`, кэш на год):
+jsdelivr, unpkg, cdnjs и Google Fonts у части российских провайдеров замедлены, и сайт
+у таких покупателей открывается только с VPN.
+
+| Файл | Что это |
+|---|---|
+| `web/vendor/swiper-12.2.0.min.js`, `swiper-12.2.0.min.css` | Swiper — слайдер программ |
+| `web/vendor/scrollbooster-3.0.2.min.js` | ScrollBooster — прокрутка перетаскиванием |
+| `web/vendor/litepicker-2.0.12.js` | Litepicker — календарь в корзине (грузит `delivery-datepicker.js`) |
+| `web/vendor/html2canvas-1.3.2.min.js` | html2canvas — картинка меню для корзины (`programs.html`) |
+| `web/vendor/fonts/inter.css` | шрифт Inter (вариативный, 100–900, кириллица и латиница) |
+
+Новую версию библиотеки кладите под новым именем файла (с версией) — старое имя закэшировано
+у покупателей на год.
 
 Дни доставки во всех городах — вт, чт, пт и вс (`defaults.closedWeekdays` в `delivery-date.js`).
 
