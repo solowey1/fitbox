@@ -29,7 +29,8 @@
 
   var CONFIG = {
     // Litepicker сам подставляет свой CSS — отдельный файл стилей не нужен
-    lib: 'https://cdn.jsdelivr.net/npm/litepicker@2.0.12/dist/litepicker.js',
+    // со своего сервера: jsdelivr у части провайдеров тормозит
+    lib: 'https://fitbox.solowey.ru/web/vendor/litepicker-2.0.12.js',
 
     dateInput: 'input[name="date"], input[data-delivery-date]',
     form: '.t706__form, .t-form, form',

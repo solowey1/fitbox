@@ -1,14 +1,13 @@
 <!--
   Конструктор «Собери своё меню» — блок T123 на странице kzn.fitbox.su.
   Стили: web/constructor/constructor.css (вставить в <style> в этом же блоке или в соседнем T123).
-  Скрипт: https://app.fitbox.su/web/constructor/constructor.js
+  Скрипт: https://fitbox.solowey.ru/web/constructor/constructor.js
 
   Сетка — Тильды: t-container + t-col t-col_12, контент по 12 колонкам
   (1160 px на десктопе, 940 px до 1200 px, 640 px и уже — до 960 px).
 -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+<!-- Шрифт Inter — со своего сервера: Google Fonts у части провайдеров тормозит -->
+<link rel="stylesheet" href="https://fitbox.solowey.ru/web/vendor/fonts/inter.css">
 
 <!-- data-city: город, для которого работает страница (конструктор запущен только в Казани) -->
 <div id="constructor" class="fbc" data-city="Казань">
@@ -53,4 +52,4 @@
   </div>
 </div>
 
-<script src="https://app.fitbox.su/web/constructor/constructor.js"></script>
+<script src="https://fitbox.solowey.ru/web/constructor/constructor.js" defer></script>

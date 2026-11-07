@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const corsMiddleware = require('./src/middleware/corsMiddleware');
 const initCronJobs = require('./src/cron');
@@ -18,7 +19,10 @@ app.use('/uploads', express.static('public/uploads'));
 const webHeaders = (res, filePath) => {
   if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600'); // Кэш на 1 час
+  // web/vendor/ — сторонние библиотеки и шрифты с версией в имени файла: содержимое не меняется,
+  // кэш на год. Остальное — на 1 час, чтобы правки быстро доходили до сайта
+  const isVendor = filePath.split(path.sep).includes('vendor');
+  res.setHeader('Cache-Control', isVendor ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
 };
 app.use('/web', express.static('web', { setHeaders: webHeaders }));
 
