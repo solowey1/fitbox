@@ -30,9 +30,10 @@
 # Картинки, скрипты, формы и корзина Тильды лежат на других, не заблокированных адресах —
 # браузер ходит к ним напрямую.
 #
-# Чтобы подключить поддомен: A-запись → IP этого сервера, блок ниже по образцу kzn.
-# IP Тильды для поддомена: `dig +short <поддомен>` ДО смены DNS (сейчас kzn, smr, tlt, dmt —
-# 185.215.4.45, fitbox.su — 176.57.65.237). Тильда сменит адрес — поменять здесь.
+# Чтобы подключить сайт: A-запись → IP этого сервера, пара блоков внизу по образцу.
+# IP Тильды для сайта: `dig +short <домен>` ДО смены DNS (fitbox.su — 176.57.65.237, города —
+# 185.215.4.45). Проверить адрес: curl --resolve <домен>:443:<IP> https://<домен>/ — должно быть 200
+# без ошибки сертификата. Тильда сменит адрес и сайт перестанет открываться — поменять здесь.
 
 # {args[0]} — IP страниц Тильды, {args[1]} — имя сайта
 (tilda_site) {
@@ -53,7 +54,7 @@
 }
 
 # Порт 80: проверки Let's Encrypt для сертификата Тильды пропускаем к Тильде
-# (у неё общий сертификат на kzn, smr, tlt, dmt — сорвётся проверка kzn, не продлится и он).
+# (у неё общий сертификат на несколько сайтов — сорвётся проверка одного, не продлится весь).
 # Свои проверки Caddy обрабатывает сам до этих правил. Остальное — на https.
 (tilda_http) {
 	handle /.well-known/acme-challenge/* {
@@ -66,6 +67,16 @@
 	}
 }
 
+# Основной сайт
+fitbox.su {
+	import tilda_site 176.57.65.237 fitbox.su
+}
+
+http://fitbox.su {
+	import tilda_http 176.57.65.237 fitbox.su
+}
+
+# Города
 kzn.fitbox.su {
 	import tilda_site 185.215.4.45 kzn.fitbox.su
 }
@@ -74,10 +85,31 @@ http://kzn.fitbox.su {
 	import tilda_http 185.215.4.45 kzn.fitbox.su
 }
 
+smr.fitbox.su {
+	import tilda_site 185.215.4.45 smr.fitbox.su
+}
+
+http://smr.fitbox.su {
+	import tilda_http 185.215.4.45 smr.fitbox.su
+}
+
+tlt.fitbox.su {
+	import tilda_site 185.215.4.45 tlt.fitbox.su
+}
+
+http://tlt.fitbox.su {
+	import tilda_http 185.215.4.45 tlt.fitbox.su
+}
+
 dmt.fitbox.su {
 	import tilda_site 185.215.4.45 dmt.fitbox.su
 }
 
 http://dmt.fitbox.su {
 	import tilda_http 185.215.4.45 dmt.fitbox.su
+}
+
+# У Тильды нет сертификата на www — сертификат выпускает Caddy, адрес ведёт на основной сайт
+www.fitbox.su, http://www.fitbox.su {
+	redir https://fitbox.su{uri} 308
 }
