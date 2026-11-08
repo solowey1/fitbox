@@ -631,7 +631,7 @@ const updateProgramSummary = (program) => {
   });
 
   const bjuText = program.nutrition.proteins && program.nutrition.fats && program.nutrition.carbohydrates
-    ? `${program.nutrition.proteins}/${program.nutrition.fats}/${program.nutrition.carbohydrates} б/ж/у`
+    ? `${program.nutrition.proteins}/${program.nutrition.fats}/${program.nutrition.carbohydrates}`
     : '';
 
   document.querySelectorAll('.program-title-descr.bju').forEach(el => {
