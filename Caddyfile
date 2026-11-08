@@ -73,3 +73,11 @@ kzn.fitbox.su {
 http://kzn.fitbox.su {
 	import tilda_http 185.215.4.45 kzn.fitbox.su
 }
+
+dmt.fitbox.su {
+	import tilda_site 185.215.4.45 dmt.fitbox.su
+}
+
+http://dmt.fitbox.su {
+	import tilda_http 185.215.4.45 dmt.fitbox.su
+}

@@ -103,6 +103,7 @@ chmod +x manage.sh
 ./manage.sh stop        # Остановить приложение
 ./manage.sh restart     # Перезапустить приложение
 ./manage.sh update      # Обновить код из GitHub, пересобрать и перезапустить
+./manage.sh caddy       # Проверить Caddyfile и применить (update делает это сам, если Caddyfile изменился)
 ./manage.sh migrate     # Запустить миграции БД
 ./manage.sh logs        # Логи приложения (по умолчанию 100 строк)
 ./manage.sh logs 500    # Логи — последние 500 строк
