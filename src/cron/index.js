@@ -1,8 +1,9 @@
 const { CronJob } = require('cron');
 
-const jobs = [
-  require('./jobs/recalculateNutrition'),
-];
+// Ночной пересчёт КБЖУ (jobs/recalculateNutrition) отключён: КБЖУ программ задано вручную
+// (nutrition_programs.data) и пересчёт по ингредиентам его перезаписывал. Нужен пересчёт — вернуть
+// require('./jobs/recalculateNutrition') в список или запустить вручную: GET /api/admin/recalculate-nutrition.
+const jobs = [];
 
 const initCronJobs = () => {
   if (process.env.CRON_ENABLED !== 'true') {
