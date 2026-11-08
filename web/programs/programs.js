@@ -1219,10 +1219,44 @@ const loadAndRenderDishes = async (programId, weekNumber = null) => {
 // ====================
 
 /**
+ * Отступы для липких элементов на планшете и телефоне (≤ 960 px): плашка программы должна «залипать»
+ * под фиксированной шапкой Тильды, а дата и выбор недели — под плашкой. Высоту шапки и плашки
+ * меряем, а не задаём в CSS: она зависит от шапки конкретной страницы и от текста программы.
+ * Значения кладём в --fb-header-h и --fb-plate-h на #menu.
+ */
+const initStickyOffsets = () => {
+  const menu = document.getElementById('menu');
+  if (!menu) return;
+
+  const plate = menu.querySelector('.program-info-wrapper[data-type="menu"]');
+  const header = document.querySelector('.tmenu-mobile_positionfixed');
+
+  const update = () => {
+    const headerBox = header && getComputedStyle(header).position === 'fixed' ? header.getBoundingClientRect() : null;
+    const headerHeight = headerBox ? Math.max(0, Math.round(headerBox.bottom)) : 0;
+    menu.style.setProperty('--fb-header-h', `${headerHeight}px`);
+
+    // плашка скрыта, пока программа не выбрана, — высота 0 (в CSS на этот случай запас)
+    const plateHeight = plate && plate.offsetHeight ? plate.offsetHeight : 0;
+    if (plateHeight) menu.style.setProperty('--fb-plate-h', `${plateHeight}px`);
+  };
+
+  update();
+  window.addEventListener('resize', update);
+  if ('ResizeObserver' in window) {
+    const observer = new ResizeObserver(update);
+    if (plate) observer.observe(plate);
+    if (header) observer.observe(header);
+  }
+};
+
+/**
  * Инициализация приложения
  */
 const initApp = async () => {
   try {
+    initStickyOffsets();
+
     // Инициализируем Intersection Observer для lazy loading изображений
     imageObserver = initImageObserver();
 

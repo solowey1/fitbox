@@ -394,7 +394,8 @@
 
 .week-select-wrapper {
     position: absolute;
-    top: var(--l);
+    /* на одном уровне с подписью дня: у .day-title отступ сверху xs + внутренний l, строка 15 px */
+    top: calc(var(--xs) + var(--l));
     z-index: 101; /* над рядом кнопок программ (z-index: 100): поле выбора заходит под него */
     justify-self: flex-end;
 }
@@ -415,6 +416,7 @@
 }
 
 .week-select {
+    line-height: 15px; /* как у подписи дня — иначе текст стоит на другой высоте */
     /* область нажатия больше текста: поля вокруг, а отрицательные отступы
        оставляют текст и стрелку на прежнем месте */
     padding: var(--s) calc(var(--s) * 2) var(--s) var(--s);
@@ -503,6 +505,7 @@
     left: 0;
     z-index: 10;
     font-size: 12px;
+    line-height: 15px;
     color: var(--dark);
     background-color: var(--light);
     padding: var(--l) var(--l) var(--xs) var(--l);
@@ -1031,10 +1034,15 @@
         margin-top: var(--m);
     }
 
+    /* --fb-header-h и --fb-plate-h — высота шапки Тильды и этой плашки, их ставит programs.js */
+    #menu {
+        --sticky-plate-top: var(--fb-header-h, 64px);
+        --sticky-day-top: calc(var(--sticky-plate-top) + var(--fb-plate-h, 96px));
+    }
+
     .program-info-wrapper[data-type="menu"] {
         position: sticky;
-        /*top: 66px;*/
-        top: 0;
+        top: var(--sticky-plate-top); /* под шапкой, не под ней */
         left: 0;
         z-index: 50;
         display: block;
@@ -1088,7 +1096,13 @@
 
     .content-wrapper {
         height: 100%;
+        /* прокручивается страница, а не блок: иначе дата не «залипает» под плашкой */
+        overflow: visible;
         -webkit-overflow-scrolling: touch;
+    }
+
+    .day-title {
+        top: var(--sticky-day-top);
     }
 
     .summary-wrapper {
@@ -1175,8 +1189,9 @@
 
     .title-week-wrapper {
         position: sticky;
-        /*top: 86px;*/
-        top: 20px;
+        /* подпись дня «залипает» рамкой на --sticky-day-top, а выбор недели стоит на xs ниже верха обёртки
+           (у .day-title отступ сверху xs, который при залипании не считается) — вычитаем, чтобы текст был на одной высоте */
+        top: calc(var(--sticky-day-top) - var(--xs));
         z-index: 60;
     }
 
