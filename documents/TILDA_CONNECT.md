@@ -5,7 +5,8 @@
 ```
 web/
   shared/        delivery-date.js, delivery-datepicker.js, delivery-cost.js — на всех страницах с корзиной;
-                 cart.css — копия стилей корзины (общий блок rec720385276)
+                 cart.css — копия стилей корзины (общий блок rec720385276);
+                 promo-gallery.js — промо-галерея в корзине и в окне в углу
   programs/      главная fitbox.su и поддомены: programs.html, programs.css, programs.js;
                  target.html — блок «Выбор цели» (сейчас отключён)
   constructor/   «Собери своё меню» (kzn.fitbox.su/constructor): constructor.html, .css, .js
@@ -27,6 +28,7 @@ web/
 | Конструктор: T123 rec5076266601 | `web/constructor/constructor.css` внутри тега `style` |
 | Конструктор: T123 rec5076274801 | `web/constructor/constructor.html` (подключает `constructor.js`) |
 | Все сайты: общий блок T123 rec720385276 | `web/shared/cart.css` внутри тега `style` |
+| fitbox.su, kzn, smr, tlt: T123 rec1357805181 | `<script src="https://fitbox.solowey.ru/web/shared/promo-gallery.js" defer></script>` |
 
 ## Программы питания (главная)
 
@@ -86,7 +88,7 @@ jsdelivr, unpkg, cdnjs и Google Fonts у части российских про
 
 | Файл | Что это |
 |---|---|
-| `web/vendor/swiper-12.2.0.min.js`, `swiper-12.2.0.min.css` | Swiper — слайдер программ |
+| `web/vendor/swiper-12.2.0.min.js`, `swiper-12.2.0.min.css` | Swiper — слайдер программ и промо-галерея |
 | `web/vendor/scrollbooster-3.0.2.min.js` | ScrollBooster — прокрутка перетаскиванием |
 | `web/vendor/litepicker-2.0.12.js` | Litepicker — календарь в корзине (грузит `delivery-datepicker.js`) |
 | `web/vendor/html2canvas-1.3.2.min.js` | html2canvas — картинка меню для корзины (`programs.html`) |
@@ -130,6 +132,28 @@ jsdelivr, unpkg, cdnjs и Google Fonts у части российских про
 он нужен Тильде для суммы заказа и письма, в списке товаров скрыт вместе со своим заголовком.
 
 **Проверка в консоли:** `FITBOX_DELIVERY.debug()`.
+
+### promo-gallery.js (промо-галерея)
+
+Слайдер с промо-картинками в трёх местах: боковая панель корзины, страница корзины и окно
+в левом нижнем углу (T945 с якорем `#popup:promo-gallery`, открывается при загрузке страницы).
+Картинки, их набор для каждого места и смена слайдов — в `CONFIG` файла.
+
+Окно в углу:
+- после закрытия (крестик, Esc) не показывается сутки — `hideAfterCloseHours`, время закрытия
+  в localStorage (`fitbox-promo-popup-closed`), на каждом поддомене своё;
+- лежит под мобильным меню и баннером cookie (`zIndex: 990`; у полосы меню 991, у раскрытого
+  меню 999, у баннера cookie 100001), но над содержимым страницы;
+- фокус при открытии ставится без прокрутки — иначе на медленной загрузке страница уезжает к окну.
+
+Окно скрипт находит по якорю и сам добавляет стили: окно — ровно по картинке, без полей
+`.t-popup` Тильды, кнопка закрытия — в белом кружке. От CSS-класса блока в Тильде не зависит.
+Swiper берётся со страницы, если его нет — из `web/vendor/`.
+
+**Подключение:** T123 rec1357805181 на fitbox.su, kzn, smr, tlt — только тег `script` (см. таблицу выше),
+разметка галереи не нужна.
+
+**Проверка в консоли:** `FITBOX_PROMO.debug()`; показать окно снова — `FITBOX_PROMO.resetPopup()` и перезагрузить страницу.
 
 ### delivery-cutoff-tester.js (только для тестовой страницы)
 
