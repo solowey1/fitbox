@@ -30,7 +30,7 @@
   // ==================== НАСТРОЙКИ ====================
 
   // Домен сервера (Caddy, APP_DOMAIN в .env). При смене домена меняется только здесь.
-  const APP_ORIGIN = 'https://fitbox.solowey.ru';
+  const APP_ORIGIN = 'https://app.fitbox.su';
 
   const CONFIG = {
     apiBaseUrl: `${APP_ORIGIN}/api`,
