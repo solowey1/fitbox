@@ -22,13 +22,14 @@ web/
 
 | Где | Что вставлено |
 |-----|---------------|
-| Каждый сайт (fitbox.su, kzn, smr, tlt, dmt) → Настройки сайта → Ещё → HTML-код в HEAD | `<script>` с `web/shared/delivery-date.js`, `web/shared/delivery-datepicker.js`, `web/shared/delivery-cost.js` |
+| Каждый сайт (fitbox.su, kzn, smr, tlt, dmt) → Настройки сайта → Ещё → HTML-код в HEAD | `web/vendor/swiper-12.2.0.min.css`, `web/vendor/swiper-12.2.0.min.js`, `<script>` с `web/shared/delivery-date.js`, `web/shared/delivery-datepicker.js`, `web/shared/delivery-cost.js` |
 | Главная (оригиналы блоков, на поддоменах — их копии): T123 rec1935240611 | `web/programs/programs.css` внутри тега `style` |
-| Главная: T123 rec1935240641 | `web/programs/programs.html` (подключает `programs.js` и html2canvas) |
+| Главная и поддомены: T123 rec1935240621 | `web/programs/programs.html` (подключает `programs.js` и html2canvas) |
+| Блок со ScrollBooster — на каждом сайте свой: fitbox.su rec716292305, kzn rec716300720, smr rec716303293, tlt rec716322460, dmt rec716334371 | `<script src="https://app.fitbox.su/web/vendor/scrollbooster-3.0.2.min.js">` |
 | Конструктор: T123 rec5076266601 | `web/constructor/constructor.css` внутри тега `style` |
 | Конструктор: T123 rec5076274801 | `web/constructor/constructor.html` (подключает `constructor.js`) |
-| Все сайты: общий блок T123 rec720385276 | `web/shared/cart.css` внутри тега `style` |
-| fitbox.su, kzn, smr, tlt: T123 rec1357805181 | `<script src="https://fitbox.solowey.ru/web/shared/promo-gallery.js" defer></script>` |
+| Все сайты: общий блок T123 rec720385276 | `web/shared/cart.css` внутри тега `style` и `<script src="https://app.fitbox.su/web/shared/promo-gallery.js" defer></script>` |
+| Корзина T706 — на каждом сайте своя: fitbox.su rec720383815, kzn rec1358001011, smr rec1358000901, tlt rec1358000201, dmt rec1358001621 | Ссылки в тексте после заказа и в согласии — относительные: `/delivery`, `/politics/terms-of-use` (адреса `*.tilda.ws` у части провайдеров заблокированы) |
 
 ## Программы питания (главная)
 

@@ -5,7 +5,7 @@
  *    после закрытия не показывается сутки (localStorage, на каждом поддомене своё).
  *
  * Подключение — T123 rec1357805181 на каждом сайте, вместо старой разметки #cart-gallery и скрипта:
- * тег script с src="https://fitbox.solowey.ru/web/shared/promo-gallery.js" и атрибутом defer
+ * тег script с src="https://app.fitbox.su/web/shared/promo-gallery.js" и атрибутом defer
  * (точная строка — в documents/TILDA_CONNECT.md).
  *
  * Стили скрипт добавляет сам и не зависит от CSS-класса блока в Тильде:
@@ -19,7 +19,7 @@
   // Адрес сервера — тот же, с которого загружен этот скрипт
   var ORIGIN = (function () {
     var script = document.currentScript;
-    return script && script.src ? new URL(script.src).origin : 'https://fitbox.solowey.ru';
+    return script && script.src ? new URL(script.src).origin : 'https://app.fitbox.su';
   })();
 
   var CONFIG = {
