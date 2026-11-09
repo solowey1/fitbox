@@ -639,7 +639,11 @@
       document.querySelectorAll(CONFIG.cartListSelector).forEach((list) => {
         list.querySelectorAll('.fbc-cart-date, .fbc-cart-warning, .fbc-cart-row-note').forEach(node => node.remove());
 
-        const rows = Array.prototype.filter.call(list.children, row => row.classList.contains('t706__product'));
+        // Вместе со строками — плашки «Вы удалили … Вернуть» (.t706__product-deleted): Тильда ставит плашку
+        // на место строки, и «Вернуть» вставляет строку обратно рядом с плашкой. Плашку переставляем в тот же
+        // день, что и блюдо, иначе она остаётся наверху списка и блюдо возвращается над всеми днями.
+        const isPlaceholder = node => node.classList.contains('t706__product-deleted');
+        const rows = Array.prototype.filter.call(list.children, node => node.classList.contains('t706__product') || isPlaceholder(node));
         const others = [];
         const groups = new Map();
 
@@ -650,6 +654,12 @@
           const parsed = product && parseSku(product.sku);
           if (!parsed || !parsed.iso) {
             others.push(row);
+            return;
+          }
+
+          if (isPlaceholder(row)) {
+            if (!groups.has(parsed.iso)) groups.set(parsed.iso, []);
+            groups.get(parsed.iso).push(row);
             return;
           }
 
@@ -677,6 +687,11 @@
         if (unavailable.length) {
           list.insertBefore(el('div', 'fbc-cart-warning t-text', CONFIG.texts.cartWarning), list.firstChild);
         }
+
+        // порядок внутри дня — как в корзине (по номеру товара); строка и её плашка стоят рядом
+        const byCartIndex = (a, b) => parseInt(a.getAttribute('data-cart-product-i'), 10) - parseInt(b.getAttribute('data-cart-product-i'), 10);
+        others.sort(byCartIndex);
+        groups.forEach(group => group.sort(byCartIndex));
 
         // остальные товары (программы) — первыми, затем дни по порядку
         others.forEach(row => list.appendChild(row));
