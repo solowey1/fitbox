@@ -440,7 +440,7 @@
   background-color: var(--grey-2);
   background-position: center;
   background-repeat: no-repeat;
-  background-size: contain;
+  background-size: cover;
 }
 
 .fbc-card-image[data-src] {
