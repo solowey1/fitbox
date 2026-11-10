@@ -132,6 +132,8 @@
       noNutrition: 'КБЖУ уточняется',
       // доставка
       deliveryOn: 'Доставка ',
+      // дописывается после даты только под выбором дня (в корзине — без неё)
+      deliveryInterval: ' с 16:00 до 22:00 в удобный интервал',
       toFree: 'До бесплатной доставки {sum}',
       freeDelivery: 'Бесплатная доставка',
       // сумма для бесплатной доставки набрана, но адрес в платной зоне
@@ -532,11 +534,12 @@
   // ---------- подписи «Доставка 1 ноября», «До бесплатной доставки …» ----------
 
   /** В выбранный день — всё тёмным; раньше выбранного дня — иконка и дата оранжевым. Дата — полужирным */
-  const deliveryOnNote = (iso, deliveryIso) => {
+  const deliveryOnNote = (iso, deliveryIso, withInterval) => {
     const note = el('div', 'fbc-delivery-note');
     note.classList.toggle('is-earlier', deliveryIso !== iso);
     const text = el('span', 'fbc-delivery-note-text', CONFIG.texts.deliveryOn);
     text.append(el('b', 'fbc-delivery-note-date', formatDayMonth(deliveryIso)));
+    if (withInterval) text.append(document.createTextNode(CONFIG.texts.deliveryInterval));
     note.append(truckIcon(), text);
     return note;
   };
@@ -1333,7 +1336,7 @@
     const deliveryIso = deliveryDayFor(window.NCDM_DELIVERY, state.city, state.selectedDay);
     ui.daysDelivery.textContent = '';
     ui.daysDelivery.hidden = !deliveryIso;
-    if (deliveryIso) ui.daysDelivery.append(deliveryOnNote(state.selectedDay, deliveryIso));
+    if (deliveryIso) ui.daysDelivery.append(deliveryOnNote(state.selectedDay, deliveryIso, true));
   };
 
   const dayCounts = () => cart.constructorItems().reduce((counts, item) => {
